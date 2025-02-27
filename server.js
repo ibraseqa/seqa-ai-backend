@@ -66,6 +66,7 @@ app.post('/api/assistant', async (req, res) => {
         const isPrinter = tokens.includes('printer');
         const hasHave = tokens.includes('have') || tokens.includes('has');
         const isNotHave = /not\s+have/i.test(lowerQuestion);
+        const isFrom = tokens.includes('from') || tokens.includes('in');
 
         // Entity extraction
         const deviceTypes = ["eda52", "eda51", "eda50", "samsung", "pr3", "zebra"];
@@ -74,7 +75,8 @@ app.post('/api/assistant', async (req, res) => {
         const statuses = ["pending", "in progress", "completed"];
         const targetType = deviceTypes.find(t => tokens.includes(t)) || null;
         const targetCompany = companies.find(c => tokens.includes(c)) || null;
-        const targetBranch = branches.find(b => tokens.includes(b)) || null;
+        const targetBranchRaw = branches.find(b => tokens.includes(b)) || (tokens.includes('mecca') ? 'makkah' : null);
+        const targetBranch = targetBranchRaw || null;
         const targetStatus = statuses.find(s => tokens.includes(s)) || null;
 
         // Context determination
