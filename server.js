@@ -32,15 +32,15 @@ function daysSince(dateStr) {
     return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
 
-// Helper to normalize text
-function normalizeText(text) {
-    return text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(Boolean);
-}
-
 // Helper to format date
 function formatDate(dateStr) {
     if (!dateStr) return "N/A";
     return new Date(dateStr).toLocaleDateString();
+}
+
+// Helper to normalize text
+function normalizeText(text) {
+    return text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(Boolean);
 }
 
 // API endpoint for assistant
@@ -50,12 +50,25 @@ app.post('/api/assistant', async (req, res) => {
     const tokens = normalizeText(lowerQuestion);
 
     try {
-        // Fetch data from Supabase
+        // Fetch data from Supabase with logging
         const { data: salesmen, error: salesmenError } = await supabase.from('salesmen').select('*');
-        if (salesmenError) throw new Error('Failed to fetch salesmen: ' + salesmenError.message);
+        if (salesmenError) {
+            console.error('Salesmen fetch error:', salesmenError.message);
+            throw new Error('Failed to fetch salesmen: ' + salesmenError.message);
+        }
+        console.log('Salesmen fetched:', salesmen.length);
 
         const { data: repairDevices, error: repairError } = await supabase.from('repair_devices').select('*');
-        if (repairError) throw new Error('Failed to fetch repair devices: ' + repairError.message);
+        if (repairError) {
+            console.error('Repair devices fetch error:', repairError.message);
+            throw new Error('Failed to fetch repair devices: ' + repairError.message);
+        }
+        console.log('Repair devices fetched:', repairDevices.length);
+
+        if (!salesmen || !repairDevices) {
+            res.json({ answer: 'Data fetch failed—tables might be empty or misnamed!' });
+            return;
+        }
 
         // Intent keywords
         const countKeywords = ['how', 'many', 'number', 'count', 'total'];
@@ -472,7 +485,7 @@ app.post('/api/assistant', async (req, res) => {
 
     } catch (error) {
         console.error('Error:', error.message);
-        res.status(500).json({ answer: 'Oops, something broke on my end. Try again!' });
+        res.status(500).json({ answer: 'Oops, something broke on my end: ' + error.message });
     }
 });
 
