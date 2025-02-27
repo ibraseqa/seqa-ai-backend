@@ -1,8 +1,9 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
-const fetch = require('node-fetch'); // Add this dependency
+const fetch = require('node-fetch');
 require('dotenv').config();
 
+// Initialize Express app
 const app = express();
 
 app.use((req, res, next) => {
@@ -26,19 +27,34 @@ const HF_API_KEY = process.env.HUGGING_FACE_API_KEY;
 
 // Helper to query Hugging Face API
 async function queryHuggingFace(prompt) {
-    const response = await fetch(HF_API_URL, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${HF_API_KEY}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            inputs: prompt,
-            parameters: { max_length: 100, temperature: 0.7, top_p: 0.9 }
-        })
-    });
-    const data = await response.json();
-    return data[0]?.generated_text || "I couldn’t generate a response—try asking differently!";
+    try {
+        const response = await fetch(HF_API_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${HF_API_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                inputs: prompt,
+                parameters: { 
+                    max_length: 50, // Shorter responses
+                    temperature: 0.7, 
+                    top_p: 0.9, 
+                    num_return_sequences: 1,
+                    do_sample: true,
+                    return_full_text: false // Only get the generated part
+                }
+            })
+        });
+        if (!response.ok) {
+            throw new Error(`Hugging Face API returned status ${response.status}`);
+        }
+        const data = await response.json();
+        return data[0]?.generated_text || "I couldn’t generate a good answer—try asking differently!";
+    } catch (error) {
+        console.error('Hugging Face Error:', error.message);
+        return "Oops, I hit a snag with my language model. Try again or ask something simpler!";
+    }
 }
 
 // API endpoint for assistant
@@ -54,28 +70,35 @@ app.post('/api/assistant', async (req, res) => {
         if (repairError) throw new Error('Failed to fetch repair devices: ' + repairError.message);
 
         // Summarize data for context
-        const salesmenSummary = `There are ${salesmen.length} salesmen. Example fields: name, company (e.g., ALSAD), branch (e.g., Jeddah), device_type (e.g., EDA52), soti (true/false).`;
-        const repairSummary = `There are ${repairDevices.length} devices in repair. Example fields: serial_number, company (e.g., ALSAD), branch (e.g., Jeddah), status (e.g., Pending), device_type (e.g., EDA52), printer_type.`;
+        const salesmenSummary = `I have data on ${salesmen.length} salesmen with fields: name, company (e.g., ALSAD), branch (e.g., Jeddah), device_type (e.g., EDA52), soti (true/false).`;
+        const repairSummary = `I have data on ${repairDevices.length} devices in repair with fields: serial_number, company (e.g., ALSAD), branch (e.g., Jeddah), status (e.g., Pending), device_type (e.g., EDA52), printer_type.`;
 
-        // Compile context
-        const context = `${salesmenSummary}\n${repairSummary}\nQuestion: ${question}\nAnswer:`;
+        // Compile prompt with clear instruction
+        const prompt = `You are a helpful assistant with access to salesmen and repair device data. Answer the question naturally and concisely based on this context:\n${salesmenSummary}\n${repairSummary}\nQuestion: ${question}\nAnswer:`;
 
         // Call Hugging Face API
-        let answer = await queryHuggingFace(context);
+        let answer = await queryHuggingFace(prompt);
 
-        // Clean up response (remove prompt part)
-        answer = answer.replace(context, '').trim();
+        // Clean up response
+        answer = answer.trim();
+        if (answer.startsWith("Answer:")) answer = answer.replace("Answer:", "").trim();
 
-        // Fallback if response is vague
-        if (answer.length < 10 || answer.includes("I couldn’t")) {
-            answer = "I’m not sure I understood that perfectly. Could you rephrase your question about salesmen or repair devices? I can help with counts, statuses, companies, branches, and more!";
+        // Truncate if repetitive
+        const words = answer.split(" ");
+        if (words.length > 5 && new Set(words).size < words.length / 2) {
+            answer = words.slice(0, 5).join(" ") + "… (I started repeating myself!)";
+        }
+
+        // Fallback if too short or unhelpful
+        if (answer.length < 5 || answer.toLowerCase() === question.toLowerCase()) {
+            answer = "I’m not sure I got that right. Could you rephrase your question about salesmen or repair devices? I can help with counts, statuses, companies, and more!";
         }
 
         res.json({ answer });
 
     } catch (error) {
         console.error('Error:', error.message);
-        res.status(500).json({ answer: 'Something went wrong. Please try again!' });
+        res.status(500).json({ answer: 'Something went wrong on my end. Please try again!' });
     }
 });
 
