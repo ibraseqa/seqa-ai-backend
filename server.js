@@ -18,7 +18,10 @@ app.use((req, res, next) => {
 app.use(express.json());
 
 // Initialize Supabase client
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = createClient(
+    process.env.SUPABASE_URL || 'https://beyzsnvccmkztgmltaqs.supabase.co',
+    process.env.SUPABASE_KEY || 'your-key-here'
+);
 
 // Context tracking
 let lastContext = { entity: null, intent: null, data: null, filters: {} };
@@ -50,14 +53,14 @@ app.post('/api/assistant', async (req, res) => {
     const tokens = normalizeText(lowerQuestion);
 
     try {
-        // Fetch data from Supabase with detailed logging
+        // Fetch data from Supabase
         console.log('Fetching salesmen...');
         const { data: salesmen, error: salesmenError } = await supabase.from('salesmen').select('*');
         if (salesmenError) {
             console.error('Salesmen fetch error:', salesmenError.message);
             throw new Error('Failed to fetch salesmen: ' + salesmenError.message);
         }
-        console.log('Salesmen fetched:', salesmen.length, 'records:', JSON.stringify(salesmen.slice(0, 2))); // Log first 2 for sample
+        console.log('Salesmen fetched:', salesmen.length);
 
         console.log('Fetching repair_devices...');
         const { data: repairDevices, error: repairError } = await supabase.from('repair_devices').select('*');
@@ -65,10 +68,10 @@ app.post('/api/assistant', async (req, res) => {
             console.error('Repair devices fetch error:', repairError.message);
             throw new Error('Failed to fetch repair devices: ' + repairError.message);
         }
-        console.log('Repair devices fetched:', repairDevices.length, 'records:', JSON.stringify(repairDevices.slice(0, 2)));
+        console.log('Repair devices fetched:', repairDevices.length);
 
         if ((!salesmen || salesmen.length === 0) && (!repairDevices || repairDevices.length === 0)) {
-            res.json({ answer: 'No data found in salesmen or repair_devices tables—check Supabase setup!' });
+            res.json({ answer: 'No data in salesmen or repair_devices—check Supabase!' });
             return;
         }
 
@@ -78,14 +81,12 @@ app.post('/api/assistant', async (req, res) => {
         const durationKeywords = ['how', 'long', 'days', 'time', 'since', 'when'];
         const listKeywords = ['list', 'show', 'tell', 'give', 'all'];
         const existKeywords = ['exist', 'there', 'any', 'some'];
-        const compareKeywords = ['more', 'less', 'than', 'compare', 'vs'];
         const isCounting = tokens.some(t => countKeywords.includes(t));
         const isDetail = tokens.some(t => detailKeywords.includes(t)) && !isCounting && !isDuration;
         const isDuration = tokens.some(t => durationKeywords.includes(t)) && !isCounting;
         const isList = tokens.some(t => listKeywords.includes(t));
         const isExist = tokens.some(t => existKeywords.includes(t)) && !isCounting;
-        const isCompare = tokens.some(t => compareKeywords.includes(t));
-        const isSalesmen = tokens.includes('salesmen') || tokens.includes('salesman');
+        const isSalesmen = tokens.includes('salesmen') || tokens.includes('salesman') || tokens.includes('list') && lastContext.entity === 'salesmen';
         const isDevices = tokens.includes('devices') || tokens.includes('device') || tokens.includes('repair');
         const wantsCompany = tokens.includes('company') || tokens.includes('from');
         const wantsBranch = tokens.includes('branch') || tokens.includes('where') || tokens.includes('location');
@@ -100,7 +101,7 @@ app.post('/api/assistant', async (req, res) => {
         const wantsComments = tokens.includes('comments') || tokens.includes('notes');
         const wantsIssue = tokens.includes('issue') || tokens.includes('problem');
         const wantsDeliveredBy = tokens.includes('delivered') || tokens.includes('by');
-        const isFrom = tokens.includes('from') || tokens.includes('in');
+        const isFrom = tokens.includes('from') || tokens.includes('in') || tokens.includes('at');
 
         // Entity extraction
         const deviceTypes = ["eda52", "eda51", "eda50", "samsung", "pr3", "zebra"];
@@ -121,10 +122,9 @@ app.post('/api/assistant', async (req, res) => {
                              isDuration ? 'duration' : 
                              isList ? 'list' : 
                              isExist ? 'exist' : 
-                             isCompare ? 'compare' : 
-                             lastContext.intent;
+                             lastContext.intent || 'counting'; // Default to counting if unclear
 
-        // Apply filters from context or question
+        // Apply filters
         let filters = { ...lastContext.filters };
         if (targetType) filters.type = targetType;
         if (targetCompany) filters.company = targetCompany;
@@ -133,9 +133,8 @@ app.post('/api/assistant', async (req, res) => {
         if (targetSerial) filters.serial = targetSerial;
         if (isNotHave && tokens.includes('soti')) filters.soti = false;
 
-        // Filter data
-        let filteredSalesmen = salesmen;
-        let filteredRepairs = repairDevices;
+        let filteredSalesmen = salesmen || [];
+        let filteredRepairs = repairDevices || [];
         if (filters.type) {
             filteredSalesmen = filteredSalesmen.filter(s => 
                 (s.device_type && s.device_type.toLowerCase() === filters.type) || 
@@ -165,92 +164,12 @@ app.post('/api/assistant', async (req, res) => {
             filteredSalesmen = filteredSalesmen.filter(s => !s.soti);
         }
 
-        // Handle "it" context
-        if (refersToIt && lastContext.data) {
-            const item = Array.isArray(lastContext.data) && lastContext.data.length === 1 ? lastContext.data[0] : null;
-            if (!item) {
-                res.json({ answer: `I’m not sure which ${lastContext.entity === 'salesmen' ? 'salesman' : 'device'} you mean—too many options!` });
-                return;
-            }
-            if (lastContext.entity === 'salesmen') {
-                if (wantsName) {
-                    res.json({ answer: `That salesman’s name is ${item.name || "unknown"}.` });
-                    return;
-                }
-                if (wantsCompany) {
-                    res.json({ answer: `That salesman’s company is ${item.company || "unknown"}.` });
-                    return;
-                }
-                if (wantsBranch) {
-                    res.json({ answer: `That salesman’s branch is ${item.branch || "unknown"}.` });
-                    return;
-                }
-                if (wantsStatus) {
-                    const status = item.verified && item.soti && item.salesbuzz ? "Completed" : (item.verified || item.soti || item.salesbuzz) ? "In Progress" : "Pending";
-                    res.json({ answer: `That salesman’s status is ${status}.` });
-                    return;
-                }
-                if (isPrinter) {
-                    const isItPrinter = item.printer_type && !item.device_type;
-                    res.json({ answer: `That salesman’s device is ${isItPrinter ? 'a printer' : 'not a printer'} (type: ${item.printer_type || item.device_type || "none"}).` });
-                    return;
-                }
-                if (wantsSerial) {
-                    res.json({ answer: `That salesman’s device serial is ${item.device_serial || "N/A"}, printer serial is ${item.printer_serial || "N/A"}.` });
-                    return;
-                }
-                if (wantsDate) {
-                    res.json({ answer: `That salesman was added on ${formatDate(item.added_date)}, edited on ${formatDate(item.edited_date)}.` });
-                    return;
-                }
-                if (wantsComments) {
-                    res.json({ answer: `Comments for that salesman: ${item.comments || "none"}.` });
-                    return;
-                }
-                res.json({ answer: `That salesman, ${item.name || "unknown"}, is in ${item.company || "N/A"} ${item.branch || "N/A"}, with device ${item.device_type || "none"} (${item.device_serial || "N/A"}), SOTI ${item.soti ? "enabled" : "disabled"}, added ${formatDate(item.added_date)}.` });
-                return;
-            } else if (lastContext.entity === 'devices') {
-                if (wantsStatus) {
-                    res.json({ answer: `That device’s status is ${item.status || "unknown"}.` });
-                    return;
-                }
-                if (wantsCompany) {
-                    res.json({ answer: `That device’s company is ${item.company || "unknown"}.` });
-                    return;
-                }
-                if (wantsBranch) {
-                    res.json({ answer: `That device’s branch is ${item.branch || "unknown"}.` });
-                    return;
-                }
-                if (isPrinter) {
-                    const isItPrinter = item.printer_type && !item.device_type;
-                    res.json({ answer: `That device is ${isItPrinter ? 'a printer' : 'not a printer'} (type: ${item.printer_type || item.device_type || "unknown"}).` });
-                    return;
-                }
-                if (wantsSerial) {
-                    res.json({ answer: `That device’s serial is ${item.serial_number || "N/A"}.` });
-                    return;
-                }
-                if (wantsDate) {
-                    res.json({ answer: `That device was received on ${formatDate(item.received_date)}, repaired on ${formatDate(item.repair_date)}.` });
-                    return;
-                }
-                if (wantsIssue) {
-                    res.json({ answer: `That device’s issue is ${item.issue || "unknown"}.` });
-                    return;
-                }
-                if (wantsDeliveredBy) {
-                    res.json({ answer: `That device was delivered by ${item.delivered_by || "unknown"}.` });
-                    return;
-                }
-                res.json({ answer: `That device (serial ${item.serial_number || "unknown"}) has status ${item.status || "unknown"}, company ${item.company || "unknown"}, branch ${item.branch || "unknown"}, type ${item.device_type || item.printer_type || "unknown"}, received ${formatDate(item.received_date)}.` });
-                return;
-            }
-        }
+        console.log('Filtered salesmen:', filteredSalesmen.length);
+        console.log('Filtered repair devices:', filteredRepairs.length);
 
         // Counting queries
-        if (isCounting || (tokens.includes('about') && lastContext.intent === 'counting')) {
-            if (isSalesmen || (!isDevices && currentEntity === 'salesmen')) {
+        if (isCounting || tokens.includes('list') && !isDetail && !isList) {
+            if (isSalesmen || (!isDevices && (!currentEntity || currentEntity === 'salesmen'))) {
                 const count = filteredSalesmen.length;
                 const answer = `${count} salesm${count === 1 ? 'an' : 'en'}${targetType ? ` with ${targetType.toUpperCase()}` : ''}${targetCompany ? ` in ${targetCompany}` : ''}${targetBranch ? ` ${targetBranch}` : ''}${isNotHave && tokens.includes('soti') ? ' without SOTI' : ''} ${count === 1 ? 'is' : 'are'} in the list.`;
                 lastContext = { entity: 'salesmen', intent: 'counting', data: filteredSalesmen, filters };
@@ -284,7 +203,7 @@ app.post('/api/assistant', async (req, res) => {
 
         // List queries
         if (isList) {
-            if (isSalesmen || (!isDevices && currentEntity === 'salesmen')) {
+            if (isSalesmen || (!isDevices && (!currentEntity || currentEntity === 'salesmen'))) {
                 if (filteredSalesmen.length === 0) {
                     const answer = `No salesmen${targetType ? ` with ${targetType.toUpperCase()}` : ''}${targetCompany ? ` in ${targetCompany}` : ''}${targetBranch ? ` in ${targetBranch}` : ''}${isNotHave && tokens.includes('soti') ? ' without SOTI' : ''} to list.`;
                     res.json({ answer });
@@ -311,7 +230,7 @@ app.post('/api/assistant', async (req, res) => {
 
         // Existence queries
         if (isExist) {
-            if (isSalesmen || (!isDevices && currentEntity === 'salesmen')) {
+            if (isSalesmen || (!isDevices && (!currentEntity || currentEntity === 'salesmen'))) {
                 const exists = filteredSalesmen.length > 0;
                 const answer = exists 
                     ? `Yes, there are salesmen${targetType ? ` with ${targetType.toUpperCase()}` : ''}${targetCompany ? ` in ${targetCompany}` : ''}${targetBranch ? ` ${targetBranch}` : ''}${isNotHave && tokens.includes('soti') ? ' without SOTI' : ''}.`
@@ -332,7 +251,7 @@ app.post('/api/assistant', async (req, res) => {
 
         // Detail queries
         if (isDetail || (tokens.includes('about') && lastContext.intent === 'counting')) {
-            if (isSalesmen || (!isDevices && currentEntity === 'salesmen')) {
+            if (isSalesmen || (!isDevices && (!currentEntity || currentEntity === 'salesmen'))) {
                 if (filteredSalesmen.length === 0) {
                     const answer = `No salesmen${targetType ? ` with ${targetType.toUpperCase()}` : ''}${targetCompany ? ` in ${targetCompany}` : ''}${targetBranch ? ` in ${targetBranch}` : ''}${isNotHave && tokens.includes('soti') ? ' without SOTI' : ''}.`;
                     res.json({ answer });
