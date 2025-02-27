@@ -36,7 +36,7 @@ const typoCorrections = {
     "compnay": "company", "brach": "branch", "comp": "company"
 };
 
-// Simple context storage (for "it" references)
+// Simple context storage
 let lastContext = { type: null, data: null };
 
 // API endpoint for assistant
@@ -95,14 +95,25 @@ app.post('/api/assistant', async (req, res) => {
 
         // Handle "it" referring to last context
         if (refersToIt && lastContext.type === 'repair' && isDetail) {
-            const repair = lastContext.data;
+            const repair = Array.isArray(lastContext.data) && lastContext.data.length === 1 ? lastContext.data[0] : lastContext.data;
+            if (Array.isArray(repair)) {
+                const answer = "I need a specific device to answer that—there are multiple in the last query!";
+                res.json({ answer });
+                return;
+            }
+            if (doc.has('printer')) {
+                const isPrinter = repair.printer_type && !repair.device_type;
+                const answer = `That device in repair is ${isPrinter ? 'a printer' : 'not a printer'} (type: ${repair.printer_type || repair.device_type || "N/A"}).`;
+                res.json({ answer });
+                return;
+            }
             if (targetField) {
                 const value = repair[targetField] || "N/A";
                 const answer = `The ${targetField.replace("_", " ")} of that device in repair is ${value}.`;
                 res.json({ answer });
                 return;
             } else {
-                const answer = `That device in repair (serial ${repair.serial_number}) has status ${repair.status}, company ${repair.company}, branch ${repair.branch}, and type ${repair.device_type || repair.printer_type || "N/A"}.`;
+                const answer = `That device in repair (serial ${repair.serial_number || "unknown"}) has status ${repair.status || "N/A"}, company ${repair.company || "N/A"}, branch ${repair.branch || "N/A"}, and type ${repair.device_type || repair.printer_type || "N/A"}.`;
                 res.json({ answer });
                 return;
             }
@@ -150,12 +161,8 @@ app.post('/api/assistant', async (req, res) => {
                 return;
             }
 
-            // Update context for "it"
-            if (filteredRepairs.length === 1) {
-                lastContext = { type: 'repair', data: filteredRepairs[0] };
-            } else {
-                lastContext = { type: 'repair', data: filteredRepairs };
-            }
+            // Update context
+            lastContext = { type: 'repair', data: filteredRepairs };
 
             if (wantsBranch && wantsCompany) {
                 const results = [...new Set(filteredRepairs.map(r => `${r.company} - ${r.branch}`))].join(", ");
@@ -181,7 +188,7 @@ app.post('/api/assistant', async (req, res) => {
                     const answer = `The status of serial ${repair.serial_number} is ${repair.status}.`;
                     res.json({ answer });
                 } else {
-                    const answer = `Details for serial ${repair.serial_number}: Status: ${repair.status}, Type: ${repair.device_type || repair.printer_type || "N/A"}, Company: ${repair.company}, Branch: ${repair.branch}, Issue: ${repair.issue}, Received: ${repair.received_date}.`;
+                    const answer = `Details for serial ${repair.serial_number}: Status: ${repair.status || "N/A"}, Type: ${repair.device_type || repair.printer_type || "N/A"}, Company: ${repair.company || "N/A"}, Branch: ${repair.branch || "N/A"}, Issue: ${repair.issue || "N/A"}, Received: ${repair.received_date || "N/A"}.`;
                     res.json({ answer });
                 }
             } else if (targetField) {
@@ -231,7 +238,7 @@ app.post('/api/assistant', async (req, res) => {
                 lastContext = { type: 'repair', data: filteredRepairs };
                 res.json({ answer });
             } else {
-                const answer = "Please specify if you want to count salesmen or repair items.";
+                const answer = "Please clarify—are you asking about salesmen or repair devices? I can count either!";
                 res.json({ answer });
             }
             return;
@@ -308,7 +315,7 @@ app.post('/api/assistant', async (req, res) => {
                     res.json({ answer });
                 }
             } else {
-                const answer = "Please specify if you want to list salesmen or repair items.";
+                const answer = "Please clarify—are you listing salesmen or repair devices? I can help with either!";
                 res.json({ answer });
             }
             return;
