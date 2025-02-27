@@ -1,6 +1,5 @@
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
-const fetch = require('node-fetch');
 require('dotenv').config();
 
 // Initialize Express app
@@ -21,83 +20,27 @@ app.use(express.json());
 // Initialize Supabase client
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-// Hugging Face API setup for RoBERTa
-const HF_API_URL = 'https://api-inference.huggingface.co/models/deepset/roberta-base-squad2';
-const HF_API_KEY = process.env.HUGGING_FACE_API_KEY;
+// Context tracking
+let lastContext = { entity: null, intent: null, data: null };
 
-// Helper to query Hugging Face RoBERTa API
-async function queryRoberta(context, question) {
-    try {
-        const response = await fetch(HF_API_URL, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${HF_API_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                inputs: {
-                    question: question,
-                    context: context
-                }
-            })
-        });
-        if (!response.ok) {
-            throw new Error(`Hugging Face API returned status ${response.status}`);
-        }
-        const data = await response.json();
-        return data.answer || "I couldn’t find an answer—try rephrasing!";
-    } catch (error) {
-        console.error('RoBERTa Error:', error.message);
-        return null; // Null triggers fallback
-    }
+// Helper to calculate days since a date
+function daysSince(dateStr) {
+    const start = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - start;
+    return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
 
-// Helper to format Supabase data as text context
-function formatContext(data, type) {
-    if (type === 'salesmen') {
-        return data.map(s => 
-            `${s.name || 'Unknown'} is a salesman in ${s.company || 'N/A'} ${s.branch || 'N/A'} with device ${s.device_type || 'none'} (serial ${s.device_serial || 'N/A'}) and printer ${s.printer_type || 'none'} (serial ${s.printer_serial || 'N/A'}). SOTI is ${s.soti ? 'enabled' : 'disabled'}, verified is ${s.verified ? 'yes' : 'no'}, SalesBuzz is ${s.salesbuzz ? 'yes' : 'no'}.`
-        ).join(' ');
-    } else if (type === 'repair_devices') {
-        return data.map(r => 
-            `Device with serial ${r.serial_number || 'N/A'} is in repair, from ${r.company || 'N/A'} ${r.branch || 'N/A'}, status ${r.status || 'N/A'}, type ${r.device_type || r.printer_type || 'N/A'}.`
-        ).join(' ');
-    }
-    return '';
-}
-
-// Local fallback for counting
-function localCount(data, query) {
-    const lowerQuery = query.toLowerCase();
-    const isCounting = /(how many|number of|count)/i.test(lowerQuery);
-    if (!isCounting) return null;
-
-    let filteredData = data;
-    const companies = ["alsad", "alshafiya", "zulal", "sehatik", "rhine", "ramah"];
-    const branches = ["asir", "jeddah", "almadinah", "makkah", "riyadh", "dammam", "jizan", "hail", "qassim"];
-    const deviceTypes = ["eda52", "eda51", "eda50", "samsung", "pr3", "zebra"];
-    const targetCompany = companies.find(c => lowerQuery.includes(c));
-    const targetBranch = branches.find(b => lowerQuery.includes(b));
-    const targetType = deviceTypes.find(t => lowerQuery.includes(t));
-
-    if (targetCompany) filteredData = filteredData.filter(item => item.company && item.company.toLowerCase() === targetCompany);
-    if (targetBranch) filteredData = filteredData.filter(item => item.branch && item.branch.toLowerCase() === targetBranch);
-    if (targetType) {
-        filteredData = filteredData.filter(item => 
-            (item.device_type && item.device_type.toLowerCase() === targetType) || 
-            (item.printer_type && item.printer_type.toLowerCase() === targetType));
-    }
-    if (/not have soti/i.test(lowerQuery) && data[0]?.soti !== undefined) {
-        filteredData = filteredData.filter(item => !item.soti);
-    }
-
-    return filteredData.length.toString();
+// Helper to normalize text
+function normalizeText(text) {
+    return text.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(Boolean);
 }
 
 // API endpoint for assistant
 app.post('/api/assistant', async (req, res) => {
     const { question } = req.body;
     const lowerQuestion = question.toLowerCase();
+    const tokens = normalizeText(lowerQuestion);
 
     try {
         // Fetch data from Supabase
@@ -107,73 +50,254 @@ app.post('/api/assistant', async (req, res) => {
         const { data: repairDevices, error: repairError } = await supabase.from('repair_devices').select('*');
         if (repairError) throw new Error('Failed to fetch repair devices: ' + repairError.message);
 
-        // Format contexts
-        const salesmenContext = formatContext(salesmen, 'salesmen');
-        const repairContext = formatContext(repairDevices, 'repair_devices');
+        // Intent keywords
+        const countKeywords = ['how', 'many', 'number', 'count', 'total'];
+        const detailKeywords = ['what', 'where', 'who', 'which', 'is', 'are', 'does'];
+        const durationKeywords = ['how', 'long', 'days', 'time', 'since'];
+        const isCounting = tokens.some(t => countKeywords.includes(t));
+        const isDetail = tokens.some(t => detailKeywords.includes(t)) && !isCounting;
+        const isDuration = tokens.some(t => durationKeywords.includes(t)) && !isCounting;
+        const isSalesmen = tokens.includes('salesmen') || tokens.includes('salesman');
+        const isDevices = tokens.includes('devices') || tokens.includes('device') || tokens.includes('repair');
+        const wantsCompany = tokens.includes('company');
+        const wantsBranch = tokens.includes('branch');
+        const wantsStatus = tokens.includes('status');
+        const refersToIt = tokens.includes('it') || tokens.includes('that');
+        const isPrinter = tokens.includes('printer');
+        const hasHave = tokens.includes('have') || tokens.includes('has');
+        const isNotHave = /not\s+have/i.test(lowerQuestion);
 
-        // Determine which context to use
-        const isSalesmen = /salesm(a|e)n/i.test(lowerQuestion);
-        const isDevices = /devices|repair/i.test(lowerQuestion);
-        let selectedContext, tableName, dataSource;
+        // Entity extraction
+        const deviceTypes = ["eda52", "eda51", "eda50", "samsung", "pr3", "zebra"];
+        const companies = ["alsad", "alshafiya", "zulal", "sehatik", "rhine", "ramah"];
+        const branches = ["asir", "jeddah", "almadinah", "makkah", "riyadh", "dammam", "jizan", "hail", "qassim"];
+        const statuses = ["pending", "in progress", "completed"];
+        const targetType = deviceTypes.find(t => tokens.includes(t)) || null;
+        const targetCompany = companies.find(c => tokens.includes(c)) || null;
+        const targetBranch = branches.find(b => tokens.includes(b)) || null;
+        const targetStatus = statuses.find(s => tokens.includes(s)) || null;
 
-        if (isSalesmen && !isDevices) {
-            selectedContext = salesmenContext;
-            tableName = 'salesmen';
-            dataSource = salesmen;
-        } else if (isDevices || (!isSalesmen && lowerQuestion.includes('repair'))) {
-            selectedContext = repairContext;
-            tableName = 'repair devices';
-            dataSource = repairDevices;
-        } else {
-            // Try both if unclear
-            let answer = await queryRoberta(salesmenContext, question);
-            if (answer && !answer.includes("couldn’t") && answer !== question) {
+        // Context determination
+        const currentEntity = isSalesmen ? 'salesmen' : isDevices ? 'devices' : lastContext.entity;
+        const currentIntent = isCounting ? 'counting' : isDetail ? 'detail' : isDuration ? 'duration' : lastContext.intent;
+
+        // Handle "it" context
+        if (refersToIt && lastContext.data) {
+            const item = Array.isArray(lastContext.data) && lastContext.data.length === 1 ? lastContext.data[0] : null;
+            if (!item) {
+                res.json({ answer: `I’m not sure which ${lastContext.entity === 'salesmen' ? 'salesman' : 'device'} you mean—too many options!` });
+                return;
+            }
+            if (lastContext.entity === 'salesmen') {
+                if (wantsCompany) {
+                    res.json({ answer: `That salesman’s company is ${item.company || "unknown"}.` });
+                    return;
+                }
+                if (wantsBranch) {
+                    res.json({ answer: `That salesman’s branch is ${item.branch || "unknown"}.` });
+                    return;
+                }
+                if (wantsStatus) {
+                    const status = item.verified && item.soti && item.salesbuzz ? "Completed" : (item.verified || item.soti || item.salesbuzz) ? "In Progress" : "Pending";
+                    res.json({ answer: `That salesman’s status is ${status}.` });
+                    return;
+                }
+                if (isPrinter) {
+                    const isItPrinter = item.printer_type && !item.device_type;
+                    res.json({ answer: `That salesman’s device is ${isItPrinter ? 'a printer' : 'not a printer'} (type: ${item.printer_type || item.device_type || "none"}).` });
+                    return;
+                }
+                res.json({ answer: `That salesman, ${item.name || "unknown"}, is in ${item.company || "N/A"} ${item.branch || "N/A"}, with device ${item.device_type || "none"} (${item.device_serial || "N/A"}) and SOTI ${item.soti ? "enabled" : "disabled"}.` });
+                return;
+            } else if (lastContext.entity === 'devices') {
+                if (wantsStatus) {
+                    res.json({ answer: `That device’s status is ${item.status || "unknown"}.` });
+                    return;
+                }
+                if (wantsCompany) {
+                    res.json({ answer: `That device’s company is ${item.company || "unknown"}.` });
+                    return;
+                }
+                if (wantsBranch) {
+                    res.json({ answer: `That device’s branch is ${item.branch || "unknown"}.` });
+                    return;
+                }
+                if (isPrinter) {
+                    const isItPrinter = item.printer_type && !item.device_type;
+                    res.json({ answer: `That device is ${isItPrinter ? 'a printer' : 'not a printer'} (type: ${item.printer_type || item.device_type || "unknown"}).` });
+                    return;
+                }
+                res.json({ answer: `That device (serial ${item.serial_number || "unknown"}) has status ${item.status || "unknown"}, company ${item.company || "unknown"}, branch ${item.branch || "unknown"}, type ${item.device_type || item.printer_type || "unknown"}.` });
+                return;
+            }
+        }
+
+        // Counting queries
+        if (isCounting || (tokens.includes('about') && lastContext.intent === 'counting')) {
+            if (isSalesmen || (!isDevices && currentEntity === 'salesmen')) {
+                let filteredSalesmen = salesmen;
+                if (targetType) filteredSalesmen = filteredSalesmen.filter(s => 
+                    (s.device_type && s.device_type.toLowerCase() === targetType) || 
+                    (s.printer_type && s.printer_type.toLowerCase() === targetType));
+                if (targetCompany) filteredSalesmen = filteredSalesmen.filter(s => s.company && s.company.toLowerCase() === targetCompany);
+                if (targetBranch) filteredSalesmen = filteredSalesmen.filter(s => s.branch && s.branch.toLowerCase() === targetBranch);
+                if (isNotHave && tokens.includes('soti')) filteredSalesmen = filteredSalesmen.filter(s => !s.soti);
+                const count = filteredSalesmen.length;
+                const answer = `${count} salesm${count === 1 ? 'an' : 'en'}${targetType ? ` with ${targetType.toUpperCase()}` : ''}${targetCompany ? ` in ${targetCompany}` : ''}${targetBranch ? ` ${targetBranch}` : ''}${isNotHave && tokens.includes('soti') ? ' without SOTI' : ''} ${count === 1 ? 'is' : 'are'} in the list.`;
+                lastContext = { entity: 'salesmen', intent: 'counting', data: filteredSalesmen };
+                res.json({ answer });
+                return;
+            } else if (isDevices || isRepair || currentEntity === 'devices') {
+                let filteredRepairs = repairDevices;
+                if (targetType) filteredRepairs = filteredRepairs.filter(r => 
+                    (r.device_type && r.device_type.toLowerCase() === targetType) || 
+                    (r.printer_type && r.printer_type.toLowerCase() === targetType));
+                if (targetCompany) filteredRepairs = filteredRepairs.filter(r => r.company && r.company.toLowerCase() === targetCompany);
+                if (targetBranch) filteredRepairs = filteredRepairs.filter(r => r.branch && r.branch.toLowerCase() === targetBranch);
+                if (targetStatus) filteredRepairs = filteredRepairs.filter(r => r.status && r.status.toLowerCase() === targetStatus);
+                const count = filteredRepairs.length;
+                const answer = `${count} device${count === 1 ? '' : 's'} ${count === 1 ? 'is' : 'are'} in repair${targetType ? ` (${targetType.toUpperCase()})` : ''}${targetCompany ? ` in ${targetCompany}` : ''}${targetBranch ? ` ${targetBranch}` : ''}${targetStatus ? ` with ${targetStatus} status` : ''}.`;
+                lastContext = { entity: 'devices', intent: 'counting', data: filteredRepairs };
                 res.json({ answer });
                 return;
             }
-            answer = await queryRoberta(repairContext, question);
-            if (answer && !answer.includes("couldn’t") && answer !== question) {
+        }
+
+        // Duration queries
+        if (isDuration && (isDevices || isRepair || currentEntity === 'devices')) {
+            let filteredRepairs = repairDevices;
+            if (targetType) filteredRepairs = filteredRepairs.filter(r => 
+                (r.device_type && r.device_type.toLowerCase() === targetType) || 
+                (r.printer_type && r.printer_type.toLowerCase() === targetType));
+            if (targetCompany) filteredRepairs = filteredRepairs.filter(r => r.company && r.company.toLowerCase() === targetCompany);
+            if (targetBranch) filteredRepairs = filteredRepairs.filter(r => r.branch && r.branch.toLowerCase() === targetBranch);
+            if (targetStatus) filteredRepairs = filteredRepairs.filter(r => r.status && r.status.toLowerCase() === targetStatus);
+
+            if (filteredRepairs.length === 0) {
+                const answer = `No devices in repair${targetType ? ` (${targetType.toUpperCase()})` : ''}${targetCompany ? ` in ${targetCompany}` : ''}${targetBranch ? ` in ${targetBranch}` : ''}${targetStatus ? ` with ${targetStatus} status` : ''} to check duration for.`;
                 res.json({ answer });
                 return;
             }
-            // Local fallback for counting
-            if (/(how many|number of|count)/i.test(lowerQuestion)) {
-                let count = localCount(salesmen, question);
-                if (count && count !== "0") {
-                    res.json({ answer: `${count} salesmen match that query.` });
-                    return;
-                }
-                count = localCount(repairDevices, question);
-                if (count && count !== "0") {
-                    res.json({ answer: `${count} devices are in repair.` });
-                    return;
-                }
-            }
-            res.json({ answer: "I’m not sure which you mean—salesmen or repair devices? Try being more specific!" });
+
+            const days = filteredRepairs.map(r => daysSince(r.received_date)).filter(d => d !== null);
+            const avgDays = days.length ? Math.round(days.reduce((a, b) => a + b, 0) / days.length) : "unknown";
+            const answer = days.length === 1 
+                ? `That device has been in repair for ${avgDays} days.`
+                : `Devices${targetType ? ` (${targetType.toUpperCase()})` : ''}${targetCompany ? ` in ${targetCompany}` : ''}${targetBranch ? ` ${targetBranch}` : ''}${targetStatus ? ` with ${targetStatus} status` : ''} have been in repair for an average of ${avgDays} days.`;
+            lastContext = { entity: 'devices', intent: 'duration', data: filteredRepairs };
+            res.json({ answer });
             return;
         }
 
-        // Query RoBERTa with the selected context
-        let answer = await queryRoberta(selectedContext, question);
+        // Detail queries
+        if (isDetail || (tokens.includes('about') && lastContext.intent === 'counting')) {
+            if (isSalesmen || (!isDevices && currentEntity === 'salesmen')) {
+                let filteredSalesmen = salesmen;
+                if (targetType) filteredSalesmen = filteredSalesmen.filter(s => 
+                    (s.device_type && s.device_type.toLowerCase() === targetType) || 
+                    (s.printer_type && s.printer_type.toLowerCase() === targetType));
+                if (targetCompany) filteredSalesmen = filteredSalesmen.filter(s => s.company && s.company.toLowerCase() === targetCompany);
+                if (targetBranch) filteredSalesmen = filteredSalesmen.filter(s => s.branch && s.branch.toLowerCase() === targetBranch);
+                if (isNotHave && tokens.includes('soti')) filteredSalesmen = filteredSalesmen.filter(s => !s.soti);
 
-        // Fallback to local logic if RoBERTa fails
-        if (!answer) {
-            if (/(how many|number of|count)/i.test(lowerQuestion)) {
-                const count = localCount(dataSource, question);
-                if (count) {
-                    answer = `${count} ${tableName === 'salesmen' ? 'salesmen' : 'devices'} ${tableName === 'repair devices' ? 'are in repair' : 'match that query'}.`;
-                } else {
-                    answer = `I couldn’t count the ${tableName}—try a different question!`;
+                if (filteredSalesmen.length === 0) {
+                    const answer = `No salesmen${targetType ? ` with ${targetType.toUpperCase()}` : ''}${targetCompany ? ` in ${targetCompany}` : ''}${targetBranch ? ` in ${targetBranch}` : ''}${isNotHave && tokens.includes('soti') ? ' without SOTI' : ''}.`;
+                    res.json({ answer });
+                    return;
                 }
-            } else {
-                answer = `I couldn’t process that about ${tableName}—try rephrasing!`;
+
+                lastContext = { entity: 'salesmen', intent: 'detail', data: filteredSalesmen };
+
+                if (tokens.includes('about') && targetType) {
+                    const count = filteredSalesmen.length;
+                    const answer = `${count} salesm${count === 1 ? 'an' : 'en'} with ${targetType.toUpperCase()}${targetCompany ? ` in ${targetCompany}` : ''}${targetBranch ? ` ${targetBranch}` : ''} ${count === 1 ? 'is' : 'are'} in the list.`;
+                    res.json({ answer });
+                    return;
+                }
+                if (wantsCompany) {
+                    const companies = [...new Set(filteredSalesmen.map(s => s.company))].join(", ");
+                    const answer = filteredSalesmen.length === 1 
+                        ? `The company of the salesman is ${companies}.`
+                        : `The companies of salesmen are ${companies}.`;
+                    res.json({ answer });
+                    return;
+                }
+                if (wantsBranch) {
+                    const branches = [...new Set(filteredSalesmen.map(s => s.branch))].join(", ");
+                    const answer = filteredSalesmen.length === 1 
+                        ? `The branch of the salesman is ${branches}.`
+                        : `The branches of salesmen are ${branches}.`;
+                    res.json({ answer });
+                    return;
+                }
+                if (wantsStatus) {
+                    const statuses = [...new Set(filteredSalesmen.map(s => 
+                        s.verified && s.soti && s.salesbuzz ? "Completed" : (s.verified || s.soti || s.salesbuzz) ? "In Progress" : "Pending"))].join(", ");
+                    const answer = filteredSalesmen.length === 1 
+                        ? `The status of the salesman is ${statuses}.`
+                        : `The statuses of salesmen are ${statuses}.`;
+                    res.json({ answer });
+                    return;
+                }
+            } else if (isDevices || isRepair || currentEntity === 'devices') {
+                let filteredRepairs = repairDevices;
+                if (targetType) filteredRepairs = filteredRepairs.filter(r => 
+                    (r.device_type && r.device_type.toLowerCase() === targetType) || 
+                    (r.printer_type && r.printer_type.toLowerCase() === targetType));
+                if (targetCompany) filteredRepairs = filteredRepairs.filter(r => r.company && r.company.toLowerCase() === targetCompany);
+                if (targetBranch) filteredRepairs = filteredRepairs.filter(r => r.branch && r.branch.toLowerCase() === targetBranch);
+                if (targetStatus) filteredRepairs = filteredRepairs.filter(r => r.status && r.status.toLowerCase() === targetStatus);
+
+                if (filteredRepairs.length === 0) {
+                    const answer = `No devices in repair${targetType ? ` (${targetType.toUpperCase()})` : ''}${targetCompany ? ` in ${targetCompany}` : ''}${targetBranch ? ` in ${targetBranch}` : ''}${targetStatus ? ` with ${targetStatus} status` : ''}.`;
+                    res.json({ answer });
+                    return;
+                }
+
+                lastContext = { entity: 'devices', intent: 'detail', data: filteredRepairs };
+
+                if (tokens.includes('about') && targetType) {
+                    const count = filteredRepairs.length;
+                    const answer = `${count} device${count === 1 ? '' : 's'} (${targetType.toUpperCase()})${targetCompany ? ` in ${targetCompany}` : ''}${targetBranch ? ` ${targetBranch}` : ''} ${count === 1 ? 'is' : 'are'} in repair.`;
+                    res.json({ answer });
+                    return;
+                }
+                if (wantsCompany) {
+                    const companies = [...new Set(filteredRepairs.map(r => r.company))].join(", ");
+                    const answer = filteredRepairs.length === 1 
+                        ? `The company of the device in repair is ${companies}.`
+                        : `The companies of devices in repair are ${companies}.`;
+                    res.json({ answer });
+                    return;
+                }
+                if (wantsBranch) {
+                    const branches = [...new Set(filteredRepairs.map(r => r.branch))].join(", ");
+                    const answer = filteredRepairs.length === 1 
+                        ? `The branch of the device in repair is ${branches}.`
+                        : `The branches of devices in repair are ${branches}.`;
+                    res.json({ answer });
+                    return;
+                }
+                if (wantsStatus) {
+                    const statuses = [...new Set(filteredRepairs.map(r => r.status))].join(", ");
+                    const answer = filteredRepairs.length === 1 
+                        ? `The status of the device in repair is ${statuses}.`
+                        : `The statuses of devices in repair are ${statuses}.`;
+                    res.json({ answer });
+                    return;
+                }
             }
-        } else if (answer === question || answer.length < 5) {
-            answer = `I didn’t quite get that about ${tableName}. Could you rephrase your question?`;
-        } else if (/^N\/A$/i.test(answer)) {
-            answer = `That info might be missing from the ${tableName} list!`;
         }
 
+        // Casual greetings
+        if (/hi|hello|hey/i.test(lowerQuestion)) {
+            const answer = "Hey there! What’s on your mind about salesmen or repair devices?";
+            res.json({ answer });
+            return;
+        }
+
+        // Fallback
+        const answer = "I’m here to help! Try asking about salesmen or repair devices—like how many, their company, branch, status, or how long they’ve been in repair.";
         res.json({ answer });
 
     } catch (error) {
