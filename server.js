@@ -16,7 +16,7 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-// Initialize Supabase client with Render environment variables
+// Initialize Supabase client
 const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_KEY
@@ -46,13 +46,14 @@ async function queryDeepSeek(context, question) {
             })
         });
         if (!response.ok) {
-            throw new Error(`DeepSeek API returned status ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`DeepSeek API returned status ${response.status}: ${errorText}`);
         }
         const data = await response.json();
         return data.choices[0].message.content.trim();
     } catch (error) {
         console.error('DeepSeek API Error:', error.message);
-        return 'Sorry, I hit a snag with the API. Try again!';
+        return `Sorry, I hit a snag with the API: ${error.message}. Try again or check the API key!`;
     }
 }
 
