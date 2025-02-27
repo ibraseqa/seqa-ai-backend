@@ -6,10 +6,9 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.17.1",
     "@supabase/supabase-js": "^2.0.0",
     "dotenv": "^16.0.0",
-    "compromise": "^14.13.0",
+    "express": "^4.17.1",
     "node-fetch": "^2.6.1"
   }
 }
