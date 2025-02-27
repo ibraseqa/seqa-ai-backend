@@ -20,8 +20,6 @@ app.use(express.json()); // Allow JSON requests
 // Initialize Supabase client
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-
-
 // Typo correction dictionary
 const typoCorrections = {
     "eda25": "EDA52", "eda521": "EDA52", "eda": "EDA52", "eda51": "EDA51", "eda50": "EDA50",
@@ -34,7 +32,7 @@ const typoCorrections = {
     "verifed": "verified", "sotti": "soti", "salesbuz": "salesbuzz", "statas": "status", "stats": "status",
     "pendign": "Pending", "inprogess": "In Progress", "comleted": "Completed", "serialnumber": "serial_number",
     "deliveredby": "delivered_by", "recieved": "received", "recived": "received", "issu": "issue",
-    "compnay": "company", "brach": "branch"
+    "compnay": "company", "brach": "branch", "comp": "company"
 };
 
 // API endpoint for assistant
@@ -60,7 +58,8 @@ app.post('/api/assistant', async (req, res) => {
         const isDetail = words.some(w => ["what", "where", "when", "is"].includes(w)) && !isCounting && !isListing;
         const isSalesmen = words.some(w => w === "salesmen");
         const isRepair = words.some(w => ["repair", "repaired"].includes(w));
-        console.log('Intents - Counting:', isCounting, 'Listing:', isListing, 'Detail:', isDetail, 'Salesmen:', isSalesmen, 'Repair:', isRepair);
+        const wantsBranch = words.some(w => w === "branch");
+        const wantsCompany = words.some(w => w === "company");
 
         // Field and filter detection
         const deviceTypes = ["EDA52", "EDA51", "EDA50", "Samsung", "PR3", "ZEBRA"];
@@ -80,41 +79,86 @@ app.post('/api/assistant', async (req, res) => {
         const targetField = [...salesmanFields, ...repairFields].find(field => 
             normalizedQuestion.includes(field.replace("_", " "))
         ) || null;
-
-        // Extract serial number explicitly
         let targetValue = null;
         const serialIndex = words.indexOf("serial");
         if (serialIndex !== -1 && words[serialIndex + 1] === "number" && serialIndex + 2 < words.length) {
             targetValue = words[serialIndex + 2];
         } else {
-            targetValue = words.find(w => !["how", "many", "list", "who", "what", "which", "in", "with", "are", "is", "of", "the", "device", "serial", "number", "printer", "salesmen", "name"]
+            targetValue = words.find(w => !["how", "many", "list", "who", "what", "which", "in", "with", "are", "is", "of", "the", "device", "serial", "number", "printer", "salesmen", "name", "branch", "company"]
                 .includes(w) && !deviceTypes.includes(w.toUpperCase()) && !companies.includes(w.toUpperCase()) && 
                 !branches.includes(w.toUpperCase()) && !statuses.includes(w.toUpperCase()) && 
                 !salesmanFields.includes(w.replace(" ", "_")) && !repairFields.includes(w.replace(" ", "_"))) || null;
         }
-        console.log('Detected - Type:', targetType, 'Company:', targetCompany, 'Branch:', targetBranch, 'Status:', targetStatus, 'Field:', targetField, 'Value:', targetValue);
 
         // Handle specific detail question: "What is the name of the salesman with device/printer serial number [value]?"
         if (isDetail && normalizedQuestion.includes("name") && (normalizedQuestion.includes("device serial") || normalizedQuestion.includes("printer serial")) && targetValue) {
-            console.log('Entering serial number name lookup...');
             const salesman = salesmen.find(s => 
                 s.device_serial.toLowerCase() === targetValue.toLowerCase() || 
                 s.printer_serial.toLowerCase() === targetValue.toLowerCase()
             );
             if (salesman) {
                 const answer = `The salesman with serial number ${targetValue} is ${salesman.name}.`;
-                console.log('Found salesman:', salesman.name);
                 res.json({ answer });
             } else {
                 const answer = `No salesman found with serial number ${targetValue}.`;
-                console.log('No salesman found for serial:', targetValue);
                 res.json({ answer });
             }
-            return; // Exit early
+            return;
         } 
+
+        // Handle repair-specific detail questions
+        if (isRepair && isDetail) {
+            let filteredRepairs = repairDevices;
+            if (targetStatus) filteredRepairs = filteredRepairs.filter(r => r.status.toLowerCase() === targetStatus.toLowerCase());
+            if (targetType) filteredRepairs = filteredRepairs.filter(r => 
+                r.device_type?.toLowerCase() === targetType.toLowerCase() || 
+                r.printer_type?.toLowerCase() === targetType.toLowerCase()
+            );
+            if (targetCompany) filteredRepairs = filteredRepairs.filter(r => r.company.toLowerCase() === targetCompany.toLowerCase());
+            if (targetBranch) filteredRepairs = filteredRepairs.filter(r => r.branch.toLowerCase() === targetBranch.toLowerCase());
+
+            if (filteredRepairs.length === 0) {
+                let answer = "No devices or printers in repair";
+                if (targetStatus) answer += ` with status ${targetStatus}`;
+                if (targetType) answer += ` of type ${targetType.toUpperCase()}`;
+                if (targetCompany) answer += ` in company ${targetCompany}`;
+                if (targetBranch) answer += ` in branch ${targetBranch}`;
+                answer += ".";
+                res.json({ answer });
+                return;
+            }
+
+            if (wantsBranch && wantsCompany) {
+                const results = filteredRepairs.map(r => `${r.company} - ${r.branch}`).join(", ");
+                let answer = targetStatus 
+                    ? `${targetStatus} devices in repair are in: ${results}.`
+                    : `Devices in repair are in: ${results}.`;
+                res.json({ answer });
+            } else if (wantsBranch) {
+                const branches = [...new Set(filteredRepairs.map(r => r.branch))].join(", ");
+                let answer = targetStatus 
+                    ? `${targetStatus} devices in repair are in branch(es): ${branches}.`
+                    : `Devices in repair are in branch(es): ${branches}.`;
+                res.json({ answer });
+            } else if (wantsCompany) {
+                const companies = [...new Set(filteredRepairs.map(r => r.company))].join(", ");
+                let answer = targetStatus 
+                    ? `${targetStatus} devices in repair belong to company(ies): ${companies}.`
+                    : `Devices in repair belong to company(ies): ${companies}.`;
+                res.json({ answer });
+            } else if (targetStatus) {
+                const count = filteredRepairs.length;
+                const answer = `There are ${count} devices in repair with status ${targetStatus}.`;
+                res.json({ answer });
+            } else {
+                const answer = `I can tell you about branches, companies, or statuses of devices in repair. What exactly would you like to know?`;
+                res.json({ answer });
+            }
+            return;
+        }
+
         // Handle counting questions
-        else if (isCounting) {
-            console.log('Entering counting block...');
+        if (isCounting) {
             if (isSalesmen) {
                 let filteredSalesmen = salesmen;
                 if (targetType) filteredSalesmen = filteredSalesmen.filter(s => s.device_type === targetType || s.printer_type === targetType);
@@ -162,9 +206,9 @@ app.post('/api/assistant', async (req, res) => {
                 res.json({ answer });
             }
         } 
+
         // Handle listing questions
         else if (isListing) {
-            console.log('Entering listing block...');
             if (isSalesmen) {
                 let filteredSalesmen = salesmen;
                 if (targetType) filteredSalesmen = filteredSalesmen.filter(s => s.device_type === targetType || s.printer_type === targetType);
@@ -236,9 +280,9 @@ app.post('/api/assistant', async (req, res) => {
                 res.json({ answer });
             }
         } 
+
         // Handle other detail questions
         else if (isDetail) {
-            console.log('Entering other detail block...');
             if (isRepair && targetValue) {
                 const repair = repairDevices.find(r => r.serial_number.toLowerCase() === targetValue.toLowerCase());
                 if (repair) {
@@ -273,13 +317,14 @@ app.post('/api/assistant', async (req, res) => {
                     res.json({ answer });
                 }
             } else {
-                const answer = "Please provide a name or serial number to get details.";
+                const answer = "Please provide a name or serial number to get details, or ask about branches, companies, or statuses!";
                 res.json({ answer });
             }
         } 
+
         // Fallback
         else {
-            const answer = "I’m not sure how to answer that. Try asking about counts, lists, or details of salesmen or repair items (e.g., by type, company, branch, status, etc.)!";
+            const answer = "I’m not sure how to answer that. Try asking about the branch, company, or status of devices in repair, or details about salesmen!";
             res.json({ answer });
         }
 
