@@ -36,6 +36,9 @@ const typoCorrections = {
     "compnay": "company", "brach": "branch", "comp": "company"
 };
 
+// Simple context storage (for "it" references)
+let lastContext = { type: null, data: null };
+
 // API endpoint for assistant
 app.post('/api/assistant', async (req, res) => {
     const { question } = req.body;
@@ -62,6 +65,7 @@ app.post('/api/assistant', async (req, res) => {
         const isRepair = doc.has('(repair|repaired|fix|fixing)');
         const wantsBranch = doc.has('branch');
         const wantsCompany = doc.has('company');
+        const refersToIt = doc.has('(it|that)');
 
         // Extract entities
         const deviceTypes = ["EDA52", "EDA51", "EDA50", "Samsung", "PR3", "ZEBRA"];
@@ -87,6 +91,21 @@ app.post('/api/assistant', async (req, res) => {
             targetValue = serialMatch[0].split("serial number")[1].trim();
         } else {
             targetValue = doc.values().not('(serial|number)').out('text') || null;
+        }
+
+        // Handle "it" referring to last context
+        if (refersToIt && lastContext.type === 'repair' && isDetail) {
+            const repair = lastContext.data;
+            if (targetField) {
+                const value = repair[targetField] || "N/A";
+                const answer = `The ${targetField.replace("_", " ")} of that device in repair is ${value}.`;
+                res.json({ answer });
+                return;
+            } else {
+                const answer = `That device in repair (serial ${repair.serial_number}) has status ${repair.status}, company ${repair.company}, branch ${repair.branch}, and type ${repair.device_type || repair.printer_type || "N/A"}.`;
+                res.json({ answer });
+                return;
+            }
         }
 
         // Handle specific detail question: "What is the name of the salesman with device/printer serial number [value]?"
@@ -131,6 +150,13 @@ app.post('/api/assistant', async (req, res) => {
                 return;
             }
 
+            // Update context for "it"
+            if (filteredRepairs.length === 1) {
+                lastContext = { type: 'repair', data: filteredRepairs[0] };
+            } else {
+                lastContext = { type: 'repair', data: filteredRepairs };
+            }
+
             if (wantsBranch && wantsCompany) {
                 const results = [...new Set(filteredRepairs.map(r => `${r.company} - ${r.branch}`))].join(", ");
                 let answer = targetStatus 
@@ -158,6 +184,13 @@ app.post('/api/assistant', async (req, res) => {
                     const answer = `Details for serial ${repair.serial_number}: Status: ${repair.status}, Type: ${repair.device_type || repair.printer_type || "N/A"}, Company: ${repair.company}, Branch: ${repair.branch}, Issue: ${repair.issue}, Received: ${repair.received_date}.`;
                     res.json({ answer });
                 }
+            } else if (targetField) {
+                const value = filteredRepairs.length === 1 ? filteredRepairs[0][targetField] || "N/A" : 
+                              [...new Set(filteredRepairs.map(r => r[targetField]))].join(", ");
+                const answer = filteredRepairs.length === 1 
+                    ? `The ${targetField.replace("_", " ")} of the device in repair is ${value}.`
+                    : `The ${targetField.replace("_", " ")} of devices in repair includes: ${value}.`;
+                res.json({ answer });
             } else {
                 const answer = `I can tell you about branches, companies, or statuses of devices in repair. What exactly would you like to know?`;
                 res.json({ answer });
@@ -181,14 +214,8 @@ app.post('/api/assistant', async (req, res) => {
                     String(s[targetField]).toLowerCase().includes(targetValue)
                 );
                 const count = filteredSalesmen.length;
-                let answer = `${count} salesmen`;
-                if (targetType) answer += ` with ${targetType}`;
-                if (targetCompany || targetBranch) answer += " in";
-                if (targetCompany) answer += ` ${targetCompany}`;
-                if (targetBranch) answer += ` ${targetBranch}`;
-                if (targetStatus) answer += ` with status ${targetStatus}`;
-                if (targetField && targetValue) answer += ` where ${targetField.replace("_", " ")} is ${targetValue}`;
-                answer += " are in the list.";
+                const answer = `${count} salesm${count === 1 ? 'an' : 'en'}${targetType ? ` with ${targetType}` : ''}${targetCompany || targetBranch ? " in" : ''}${targetCompany ? ` ${targetCompany}` : ''}${targetBranch ? ` ${targetBranch}` : ''}${targetStatus ? ` with status ${targetStatus}` : ''}${targetField && targetValue ? ` where ${targetField.replace("_", " ")} is ${targetValue}` : ''} ${count === 1 ? 'is' : 'are'} in the list.`;
+                lastContext = { type: 'salesmen', data: filteredSalesmen };
                 res.json({ answer });
             } else if (isRepair) {
                 let filteredRepairs = repairDevices;
@@ -200,14 +227,8 @@ app.post('/api/assistant', async (req, res) => {
                     String(r[targetField]).toLowerCase().includes(targetValue)
                 );
                 const count = filteredRepairs.length;
-                let answer = `${count} devices or printers`;
-                if (targetType) answer += ` (${targetType})`;
-                if (targetCompany || targetBranch) answer += " in";
-                if (targetCompany) answer += ` ${targetCompany}`;
-                if (targetBranch) answer += ` ${targetBranch}`;
-                if (targetStatus) answer += ` with status ${targetStatus}`;
-                if (targetField && targetValue) answer += ` where ${targetField.replace("_", " ")} is ${targetValue}`;
-                answer += " are in repair.";
+                const answer = `${count} device${count === 1 ? '' : 's'}${targetType ? ` (${targetType})` : ''}${targetCompany || targetBranch ? " in" : ''}${targetCompany ? ` ${targetCompany}` : ''}${targetBranch ? ` ${targetBranch}` : ''}${targetStatus ? ` with status ${targetStatus}` : ''}${targetField && targetValue ? ` where ${targetField.replace("_", " ")} is ${targetValue}` : ''} ${count === 1 ? 'is' : 'are'} in repair.`;
+                lastContext = { type: 'repair', data: filteredRepairs };
                 res.json({ answer });
             } else {
                 const answer = "Please specify if you want to count salesmen or repair items.";
@@ -251,6 +272,7 @@ app.post('/api/assistant', async (req, res) => {
                     if (targetStatus) answer += ` with status ${targetStatus}`;
                     if (targetField && targetValue) answer += ` where ${targetField.replace("_", " ")} is ${targetValue}`;
                     answer += `: ${names}.`;
+                    lastContext = { type: 'salesmen', data: filteredSalesmen };
                     res.json({ answer });
                 }
             } else if (isRepair) {
@@ -282,6 +304,7 @@ app.post('/api/assistant', async (req, res) => {
                     if (targetStatus) answer += ` with status ${targetStatus}`;
                     if (targetField && targetValue) answer += ` where ${targetField.replace("_", " ")} is ${targetValue}`;
                     answer += ` in repair: ${serials}.`;
+                    lastContext = { type: 'repair', data: filteredRepairs };
                     res.json({ answer });
                 }
             } else {
