@@ -20,7 +20,7 @@ app.use(express.json()); // Allow JSON requests
 // Initialize Supabase client
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-// ... rest of your server.js code ...
+
 
 // Typo correction dictionary
 const typoCorrections = {
