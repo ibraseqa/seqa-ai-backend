@@ -1,22 +1,15 @@
 {
   "name": "seqa-ai-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@supabase/supabase-js": "^2.49.1",
-    "axios": "^1.8.1",
-    "compromise": "^14.14.4",
-    "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "node-fetch": "^3.3.2"
+    "express": "^4.17.1",
+    "@supabase/supabase-js": "^2.0.0",
+    "dotenv": "^16.0.0",
+    "compromise": "^14.13.0",
     "node-fetch": "^2.6.1"
-  },
-  "description": ""
+  }
 }
