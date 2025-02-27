@@ -37,12 +37,12 @@ async function queryHuggingFace(prompt) {
             body: JSON.stringify({
                 inputs: prompt,
                 parameters: { 
-                    max_length: 50, // Shorter responses
+                    max_length: 50, 
                     temperature: 0.7, 
                     top_p: 0.9, 
                     num_return_sequences: 1,
                     do_sample: true,
-                    return_full_text: false // Only get the generated part
+                    return_full_text: false
                 }
             })
         });
@@ -50,10 +50,10 @@ async function queryHuggingFace(prompt) {
             throw new Error(`Hugging Face API returned status ${response.status}`);
         }
         const data = await response.json();
-        return data[0]?.generated_text || "I couldn’t generate a good answer—try asking differently!";
+        return data[0]?.generated_text || "I couldn’t generate a good answer!";
     } catch (error) {
         console.error('Hugging Face Error:', error.message);
-        return "Oops, I hit a snag with my language model. Try again or ask something simpler!";
+        return "Sorry, I hit a snag with my language model!";
     }
 }
 
@@ -69,11 +69,26 @@ app.post('/api/assistant', async (req, res) => {
         const { data: repairDevices, error: repairError } = await supabase.from('repair_devices').select('*');
         if (repairError) throw new Error('Failed to fetch repair devices: ' + repairError.message);
 
-        // Summarize data for context
-        const salesmenSummary = `I have data on ${salesmen.length} salesmen with fields: name, company (e.g., ALSAD), branch (e.g., Jeddah), device_type (e.g., EDA52), soti (true/false).`;
-        const repairSummary = `I have data on ${repairDevices.length} devices in repair with fields: serial_number, company (e.g., ALSAD), branch (e.g., Jeddah), status (e.g., Pending), device_type (e.g., EDA52), printer_type.`;
+        // Simple intent detection with regex (faster than NLP for now)
+        const lowerQuestion = question.toLowerCase();
+        const isCounting = /(how many|number of|count)/i.test(lowerQuestion);
+        const isDevices = /devices/i.test(lowerQuestion);
+        const isRepair = /repair/i.test(lowerQuestion);
+        const isSalesmen = /salesm(a|e)n/i.test(lowerQuestion);
 
-        // Compile prompt with clear instruction
+        // Handle counting devices in repair locally (fast!)
+        if (isCounting && isDevices && isRepair) {
+            const count = repairDevices.length;
+            const answer = `${count} device${count === 1 ? '' : 's'} ${count === 1 ? 'is' : 'are'} in repair.`;
+            res.json({ answer });
+            return;
+        }
+
+        // Summarize data for context (for HF API)
+        const salesmenSummary = `There are ${salesmen.length} salesmen with fields: name, company (e.g., ALSAD), branch (e.g., Jeddah), device_type (e.g., EDA52), soti (true/false).`;
+        const repairSummary = `There are ${repairDevices.length} devices in repair with fields: serial_number, company (e.g., ALSAD), branch (e.g., Jeddah), status (e.g., Pending), device_type (e.g., EDA52), printer_type.`;
+
+        // Compile prompt for HF API (only for non-counting queries)
         const prompt = `You are a helpful assistant with access to salesmen and repair device data. Answer the question naturally and concisely based on this context:\n${salesmenSummary}\n${repairSummary}\nQuestion: ${question}\nAnswer:`;
 
         // Call Hugging Face API
@@ -91,7 +106,7 @@ app.post('/api/assistant', async (req, res) => {
 
         // Fallback if too short or unhelpful
         if (answer.length < 5 || answer.toLowerCase() === question.toLowerCase()) {
-            answer = "I’m not sure I got that right. Could you rephrase your question about salesmen or repair devices? I can help with counts, statuses, companies, and more!";
+            answer = "I’m not sure I got that right. Could you rephrase your question about salesmen or repair devices? I can help with counts, statuses, companies, branches, and more!";
         }
 
         res.json({ answer });
