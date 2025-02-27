@@ -50,23 +50,25 @@ app.post('/api/assistant', async (req, res) => {
     const tokens = normalizeText(lowerQuestion);
 
     try {
-        // Fetch data from Supabase with logging
+        // Fetch data from Supabase with detailed logging
+        console.log('Fetching salesmen...');
         const { data: salesmen, error: salesmenError } = await supabase.from('salesmen').select('*');
         if (salesmenError) {
             console.error('Salesmen fetch error:', salesmenError.message);
             throw new Error('Failed to fetch salesmen: ' + salesmenError.message);
         }
-        console.log('Salesmen fetched:', salesmen.length);
+        console.log('Salesmen fetched:', salesmen.length, 'records:', JSON.stringify(salesmen.slice(0, 2))); // Log first 2 for sample
 
+        console.log('Fetching repair_devices...');
         const { data: repairDevices, error: repairError } = await supabase.from('repair_devices').select('*');
         if (repairError) {
             console.error('Repair devices fetch error:', repairError.message);
             throw new Error('Failed to fetch repair devices: ' + repairError.message);
         }
-        console.log('Repair devices fetched:', repairDevices.length);
+        console.log('Repair devices fetched:', repairDevices.length, 'records:', JSON.stringify(repairDevices.slice(0, 2)));
 
-        if (!salesmen || !repairDevices) {
-            res.json({ answer: 'Data fetch failed—tables might be empty or misnamed!' });
+        if ((!salesmen || salesmen.length === 0) && (!repairDevices || repairDevices.length === 0)) {
+            res.json({ answer: 'No data found in salesmen or repair_devices tables—check Supabase setup!' });
             return;
         }
 
