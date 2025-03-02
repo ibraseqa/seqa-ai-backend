@@ -26,7 +26,7 @@ const supabase = createClient(
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// Helper to query OpenAI API
+// Helper to query OpenAI API (gpt-3.5-turbo)
 async function queryOpenAI(context, question) {
     try {
         const response = await fetch(OPENAI_API_URL, {
@@ -36,7 +36,7 @@ async function queryOpenAI(context, question) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'gpt-3.5-turbo', // Cost-effective, supports your needs
+                model: 'gpt-3.5-turbo',
                 messages: [
                     { role: 'system', content: 'You are an AI assistant. Use the provided JSON data to answer questions about salesmen and repair devices accurately.' },
                     { role: 'user', content: `Data: ${JSON.stringify(context)}\nQuestion: ${question}` }
