@@ -22,37 +22,36 @@ const supabase = createClient(
     process.env.SUPABASE_KEY
 );
 
-// DeepSeek API setup
-const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+// Hugging Face API setup (Mistral-7B)
+const HF_API_URL = 'https://api-inference.huggingface.co/models/mixtral-7b-instruct-v0.2';
+const HF_API_KEY = process.env.HF_API_KEY || 'your-hf-api-key-here'; // Replace with your HF key
 
-// Helper to query DeepSeek API
-async function queryDeepSeek(context, question) {
+// Helper to query Hugging Face Mistral-7B API
+async function queryMistral(context, question) {
     try {
-        const response = await fetch(DEEPSEEK_API_URL, {
+        const response = await fetch(HF_API_URL, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+                'Authorization': `Bearer ${HF_API_KEY}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                model: 'deepseek-chat',
-                messages: [
-                    { role: 'system', content: 'You are an AI assistant. Use the provided JSON data to answer questions about salesmen and repair devices accurately.' },
-                    { role: 'user', content: `Data: ${JSON.stringify(context)}\nQuestion: ${question}` }
-                ],
-                max_tokens: 150,
-                temperature: 0.7
+                inputs: `Data: ${JSON.stringify(context)}\nQuestion: ${question}`,
+                parameters: {
+                    max_new_tokens: 150,
+                    temperature: 0.7,
+                    top_p: 0.9
+                }
             })
         });
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`DeepSeek API returned status ${response.status}: ${errorText}`);
+            throw new Error(`Hugging Face API returned status ${response.status}: ${errorText}`);
         }
         const data = await response.json();
-        return data.choices[0].message.content.trim();
+        return data[0].generated_text.replace(`Data: ${JSON.stringify(context)}\nQuestion: ${question}`, '').trim();
     } catch (error) {
-        console.error('DeepSeek API Error:', error.message);
+        console.error('Mistral API Error:', error.message);
         return `Sorry, I hit a snag with the API: ${error.message}. Try again or check the API key!`;
     }
 }
@@ -85,8 +84,8 @@ app.post('/api/assistant', async (req, res) => {
             repair_devices: repairDevices || []
         };
 
-        // Query DeepSeek API
-        const answer = await queryDeepSeek(context, question);
+        // Query Mistral API
+        const answer = await queryMistral(context, question);
 
         // Handle casual greetings
         if (/hi|hello|hey/i.test(lowerQuestion)) {
