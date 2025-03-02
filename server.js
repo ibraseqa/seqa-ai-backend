@@ -26,9 +26,18 @@ const supabase = createClient(
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+// Chat history for minimal context
+let chatHistory = [];
+
 // Helper to query OpenAI API (gpt-3.5-turbo)
 async function queryOpenAI(context, question) {
     try {
+        const messages = [
+            { role: 'system', content: 'Answer using this JSON data: ' + JSON.stringify(context) },
+            ...chatHistory.slice(-1), // Last message only
+            { role: 'user', content: question }
+        ];
+
         const response = await fetch(OPENAI_API_URL, {
             method: 'POST',
             headers: {
@@ -37,12 +46,9 @@ async function queryOpenAI(context, question) {
             },
             body: JSON.stringify({
                 model: 'gpt-3.5-turbo',
-                messages: [
-                    { role: 'system', content: 'You are an AI assistant. Use the provided JSON data to answer questions about salesmen and repair devices accurately.' },
-                    { role: 'user', content: `Data: ${JSON.stringify(context)}\nQuestion: ${question}` }
-                ],
-                max_tokens: 150,
-                temperature: 0.7
+                messages: messages,
+                max_tokens: 50, // Reduced for minimal output
+                temperature: 0.5 // Lower for concise answers
             })
         });
         if (!response.ok) {
@@ -50,10 +56,14 @@ async function queryOpenAI(context, question) {
             throw new Error(`OpenAI API returned status ${response.status}: ${errorText}`);
         }
         const data = await response.json();
-        return data.choices[0].message.content.trim();
+        const answer = data.choices[0].message.content.trim();
+
+        // Update chat history
+        chatHistory = [{ role: 'user', content: question }, { role: 'assistant', content: answer }];
+        return answer;
     } catch (error) {
         console.error('OpenAI API Error:', error.message);
-        return `Sorry, I hit a snag with the API: ${error.message}. Try again or check the API key!`;
+        return `Error: ${error.message}`;
     }
 }
 
@@ -75,22 +85,23 @@ app.post('/api/assistant', async (req, res) => {
         console.log('Repair devices fetched:', repairDevices.length);
 
         if ((!salesmen || salesmen.length === 0) && (!repairDevices || repairDevices.length === 0)) {
-            res.json({ answer: 'No data in salesmen or repair_devices—check Supabase setup!' });
+            res.json({ answer: 'No data found—check Supabase!' });
             return;
         }
 
-        // Combine data into context
-        const context = {
-            salesmen: salesmen || [],
-            repair_devices: repairDevices || []
-        };
+        // Determine relevant context
+        const isSalesmen = /salesm[ae]n|list/i.test(lowerQuestion);
+        const isDevices = /device|repair/i.test(lowerQuestion);
+        const context = isSalesmen && !isDevices ? { salesmen } : 
+                        isDevices && !isSalesmen ? { repair_devices: repairDevices } : 
+                        { salesmen, repair_devices };
 
         // Query OpenAI API
         const answer = await queryOpenAI(context, question);
 
         // Handle casual greetings
-        if (/hi|hello|hey/i.test(lowerQuestion)) {
-            res.json({ answer: "Hey there! I’m ready to help with salesmen or repair devices—ask me anything!" });
+        if (['hi', 'hello', 'hey'].includes(lowerQuestion.trim())) {
+            res.json({ answer: "Hi! Ask about salesmen or repair devices." });
             return;
         }
 
@@ -98,7 +109,7 @@ app.post('/api/assistant', async (req, res) => {
 
     } catch (error) {
         console.error('Error:', error.message);
-        res.status(500).json({ answer: 'Oops, something broke on my end: ' + error.message });
+        res.status(500).json({ answer: 'Oops, something broke: ' + error.message });
     }
 });
 
