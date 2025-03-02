@@ -583,7 +583,7 @@
     <div class="assistant-container" id="assistantContainer">
         <div class="assistant-header">Seqa Assistant</div>
         <div class="assistant-chat" id="assistantChat">
-            <div class="assistant-message">Hello! I’m your AI assistant. Ask me anything about repair devices, salesmen, or predictions!</div>
+            <div class="assistant-message">Hello! I’m your AI assistant. Ask me anything about repair devices or salesmen!</div>
         </div>
         <div class="assistant-input">
             <input type="text" id="assistantInput" placeholder="Type your question...">
@@ -734,7 +734,6 @@
         let currentUser = null;
         let charts = {};
         let chartData = {};
-        let repairDevices = [];
         let fullscreenChart = null;
         let isCompanyBranchView = true;
 
@@ -817,75 +816,7 @@
             showLogin();
         }
 
-        function calculateDaysBetween(dateStr, endDateStr = null) {
-            const start = new Date(dateStr);
-            const end = endDateStr ? new Date(endDateStr) : new Date();
-            if (isNaN(start) || isNaN(end)) return null;
-            const diffMs = end - start;
-            return Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        }
-
-        function correctTypo(word) {
-            const corrections = {
-                "devcies": "devices",
-                "devicse": "devices",
-                "deivces": "devices",
-                "repiar": "repair",
-                "repai": "repair",
-                "repar": "repair",
-                "numbner": "number",
-                "coutn": "count",
-                "howm": "how",
-                "mnay": "many",
-                "eda25": "eda52",
-                "eda521": "eda52",
-                "eda": "eda52"
-            };
-            return corrections[word] || word;
-        }
-
-        function processQuestion(input) {
-            let words = input.toLowerCase().split(/\s+/).map(correctTypo);
-            const intent = { count: false, duration: false, type: null, repair: false };
-
-            // Detect intent
-            if (words.some(w => ["how", "many", "number", "count", "what"].includes(w))) intent.count = true;
-            if (words.some(w => ["long", "time", "duration", "days"].includes(w))) intent.duration = true;
-            if (words.some(w => ["repair", "repaired", "fix", "fixing"].includes(w))) intent.repair = true;
-            intent.type = words.find(w => ["eda52", "eda51", "eda50", "samsung", "pr3", "zebra"].includes(w)) || null;
-
-            // Process based on intent
-            if (intent.repair && intent.count) {
-                const inRepair = repairDevices.filter(d => d.status !== 'Completed');
-                if (intent.type) {
-                    const typeCount = inRepair.filter(d => (d.device_type === intent.type || d.printer_type === intent.type)).length;
-                    return `There are ${typeCount} ${intent.type.toUpperCase()} items currently in repair.`;
-                }
-                const deviceCount = inRepair.filter(d => d.device_type).length;
-                return words.includes("devices") || words.includes("device")
-                    ? `There are ${deviceCount} devices currently in repair.`
-                    : `There are ${inRepair.length} items (devices and printers) currently in repair.`;
-            }
-
-            if (intent.repair && intent.duration) {
-                const inRepair = repairDevices.filter(d => d.status !== 'Completed');
-                if (inRepair.length === 0) return "No devices or printers are currently in repair.";
-                if (intent.type) {
-                    const typeRepairs = inRepair.filter(d => (d.device_type === intent.type || d.printer_type === intent.type));
-                    if (typeRepairs.length === 0) return `No ${intent.type.toUpperCase()} items are currently in repair.`;
-                    const durations = typeRepairs.map(d => calculateDaysBetween(d.received_date));
-                    const avg = durations.reduce((a, b) => a + b, 0) / durations.length;
-                    return `${intent.type.toUpperCase()} items have been in repair for an average of ${Math.round(avg)} days.`;
-                }
-                const durations = inRepair.map(d => calculateDaysBetween(d.received_date));
-                const avg = durations.reduce((a, b) => a + b, 0) / durations.length;
-                return `Items have been in repair for an average of ${Math.round(avg)} days.`;
-            }
-
-            return "I didn’t quite catch that. Try asking about the number of devices in repair or how long they’ve been there!";
-        }
-
-        function sendAssistantMessage() {
+        async function sendAssistantMessage() {
             const message = ELEMENTS.assistantInput.value.trim();
             if (!message) return;
 
@@ -895,18 +826,39 @@
             userMessage.textContent = message;
             ELEMENTS.assistantChat.appendChild(userMessage);
 
-            // Process with AI-like understanding
-            const response = processQuestion(message);
+            ELEMENTS.assistantInput.disabled = true;
+            ELEMENTS.assistantInput.nextElementSibling.disabled = true;
 
-            // Add assistant response
-            const assistantMessage = document.createElement('div');
-            assistantMessage.className = 'assistant-message';
-            assistantMessage.textContent = response;
-            ELEMENTS.assistantChat.appendChild(assistantMessage);
+            try {
+                const response = await fetch('https://seqa-ai-backend.onrender.com/api/assistant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: message }),
+                    timeout: 15000
+                });
 
-            // Clear input and scroll
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const assistantMessage = document.createElement('div');
+                assistantMessage.className = 'assistant-message';
+                assistantMessage.textContent = data.answer || 'No answer received.';
+                ELEMENTS.assistantChat.appendChild(assistantMessage);
+            } catch (error) {
+                console.error('Assistant fetch error:', error);
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'assistant-message';
+                errorMessage.textContent = `Error: ${error.message}`;
+                ELEMENTS.assistantChat.appendChild(errorMessage);
+            }
+
             ELEMENTS.assistantInput.value = "";
+            ELEMENTS.assistantInput.disabled = false;
+            ELEMENTS.assistantInput.nextElementSibling.disabled = false;
             ELEMENTS.assistantChat.scrollTop = ELEMENTS.assistantChat.scrollHeight;
+            ELEMENTS.assistantInput.focus();
         }
 
         ELEMENTS.assistantInput.addEventListener("keypress", (e) => {
@@ -1309,7 +1261,7 @@
                 }
 
                 const fetchedSalesmen = salesmenData || [];
-                repairDevices = repairData || [];
+                const repairDevices = repairData || [];
 
                 chartData = {
                     salesmenByCompanyBranch: fetchedSalesmen.reduce((acc, { company, branch }) => {
