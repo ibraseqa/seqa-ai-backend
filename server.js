@@ -29,9 +29,9 @@ async function queryOpenAI(context, question) {
         const messages = [
             { 
                 role: 'system', 
-                content: `You are a helpful assistant. Use this JSON data: ${JSON.stringify(context)}. Answer in concise, natural language without repeating the JSON. Maintain context from prior questions.` 
+                content: `You are a helpful assistant. Use this JSON data: ${JSON.stringify(context)}. Answer in concise, natural language without repeating the JSON. Maintain context from prior questions—stick to the company and branch mentioned last (e.g., ALSAD Jeddah) unless the new question specifies otherwise.` 
             },
-            ...chatHistory.slice(-2), // Keep last 2 exchanges for context
+            ...chatHistory.slice(-4), // Keep last 4 exchanges for stronger context
             { role: 'user', content: question }
         ];
 
@@ -58,7 +58,7 @@ async function queryOpenAI(context, question) {
         const data = await response.json();
         const answer = data.choices[0].message.content.trim();
         chatHistory.push({ role: 'user', content: question }, { role: 'assistant', content: answer });
-        if (chatHistory.length > 6) chatHistory = chatHistory.slice(-6); // Limit history
+        if (chatHistory.length > 8) chatHistory = chatHistory.slice(-8); // Limit to 8 items
         console.log('OpenAI response:', answer);
         return answer;
     } catch (error) {
