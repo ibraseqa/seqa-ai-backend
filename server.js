@@ -26,16 +26,17 @@ let chatHistory = [];
 
 async function queryOpenAI(context, question) {
     try {
+        const totalSalesmen = context.salesmen.length; // Pre-calculate for clarity
         const messages = [
             { 
                 role: 'system', 
-                content: `You are a helpful assistant. Use this JSON data: ${JSON.stringify(context)}. Answer in concise, natural language without repeating the JSON. Maintain context from prior questions—stick to the company and branch mentioned last (e.g., ALSAD Jeddah) unless the new question specifies otherwise.` 
+                content: `You are a helpful assistant. Use this JSON data: ${JSON.stringify(context)}. The salesmen list has ${totalSalesmen} entries, each with one device unless specified. Answer in concise, natural language without repeating the JSON. Maintain context from prior questions—stick to the last mentioned company/branch unless specified otherwise.` 
             },
-            ...chatHistory.slice(-4), // Keep last 4 exchanges for stronger context
+            ...chatHistory.slice(-4),
             { role: 'user', content: question }
         ];
 
-        console.log('Sending to OpenAI:', { question, context_summary: { salesmen: context.salesmen.length, repair_devices: context.repair_devices.length } });
+        console.log('Sending to OpenAI:', { question, total_salesmen: totalSalesmen, repair_devices: context.repair_devices.length });
         const response = await fetch(OPENAI_API_URL, {
             method: 'POST',
             headers: {
@@ -58,7 +59,7 @@ async function queryOpenAI(context, question) {
         const data = await response.json();
         const answer = data.choices[0].message.content.trim();
         chatHistory.push({ role: 'user', content: question }, { role: 'assistant', content: answer });
-        if (chatHistory.length > 8) chatHistory = chatHistory.slice(-8); // Limit to 8 items
+        if (chatHistory.length > 8) chatHistory = chatHistory.slice(-8);
         console.log('OpenAI response:', answer);
         return answer;
     } catch (error) {
