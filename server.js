@@ -8,9 +8,7 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
-    }
+    if (req.method === 'OPTIONS') return res.sendStatus(200);
     next();
 });
 
@@ -29,12 +27,15 @@ let chatHistory = [];
 async function queryOpenAI(context, question) {
     try {
         const messages = [
-            { role: 'system', content: `Answer using this JSON data: ${JSON.stringify(context)}. Do not repeat the data in your response.` },
-            ...chatHistory.slice(-1),
+            { 
+                role: 'system', 
+                content: `You are a helpful assistant. Use this JSON data: ${JSON.stringify(context)}. Answer in concise, natural language without repeating the JSON. Maintain context from prior questions.` 
+            },
+            ...chatHistory.slice(-2), // Keep last 2 exchanges for context
             { role: 'user', content: question }
         ];
 
-        console.log('Sending to OpenAI with question:', question);
+        console.log('Sending to OpenAI:', { question, context_summary: { salesmen: context.salesmen.length, repair_devices: context.repair_devices.length } });
         const response = await fetch(OPENAI_API_URL, {
             method: 'POST',
             headers: {
@@ -56,38 +57,33 @@ async function queryOpenAI(context, question) {
 
         const data = await response.json();
         const answer = data.choices[0].message.content.trim();
-        chatHistory = [{ role: 'user', content: question }, { role: 'assistant', content: answer }];
+        chatHistory.push({ role: 'user', content: question }, { role: 'assistant', content: answer });
+        if (chatHistory.length > 6) chatHistory = chatHistory.slice(-6); // Limit history
         console.log('OpenAI response:', answer);
         return answer;
     } catch (error) {
-        console.error('OpenAI API Error:', error.message);
-        return `Sorry, I hit an issue with the AI service: ${error.message}`;
+        console.error('OpenAI Error:', error.message);
+        return `Sorry, I hit an AI snag: ${error.message}`;
     }
 }
 
 app.post('/api/assistant', async (req, res) => {
     const { question } = req.body;
     if (!question) {
-        return res.status(400).json({ answer: 'Please provide a question!' });
+        return res.status(400).json({ answer: 'Please ask a question!' });
     }
 
     console.log('Received question:', question);
 
     try {
-        console.log('Fetching salesmen data...');
+        console.log('Fetching salesmen...');
         const { data: salesmen, error: salesmenError } = await supabase.from('salesmen').select('*');
-        if (salesmenError) {
-            console.error('Salesmen fetch error:', salesmenError.message);
-            throw new Error(`Failed to fetch salesmen: ${salesmenError.message}`);
-        }
+        if (salesmenError) throw new Error(`Salesmen fetch failed: ${salesmenError.message}`);
         console.log('Salesmen fetched:', salesmen.length);
 
-        console.log('Fetching repair_devices data...');
+        console.log('Fetching repair_devices...');
         const { data: repairDevices, error: repairError } = await supabase.from('repair_devices').select('*');
-        if (repairError) {
-            console.error('Repair devices fetch error:', repairError.message);
-            throw new Error(`Failed to fetch repair devices: ${repairError.message}`);
-        }
+        if (repairError) throw new Error(`Repair devices fetch failed: ${repairError.message}`);
         console.log('Repair devices fetched:', repairDevices.length);
 
         const context = {
@@ -96,7 +92,7 @@ app.post('/api/assistant', async (req, res) => {
         };
 
         if (context.salesmen.length === 0 && context.repair_devices.length === 0) {
-            return res.json({ answer: 'No data available in the system—check Supabase!' });
+            return res.json({ answer: 'No data found—check your Supabase tables!' });
         }
 
         const answer = await queryOpenAI(context, question);
@@ -104,7 +100,7 @@ app.post('/api/assistant', async (req, res) => {
 
     } catch (error) {
         console.error('Server error:', error.message);
-        res.status(500).json({ answer: `Server error: ${error.message}` });
+        res.status(500).json({ answer: `Server issue: ${error.message}` });
     }
 });
 
