@@ -4,12 +4,14 @@ const fetch = require('node-fetch');
 
 const app = express();
 
+// CORS middleware with explicit settings
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.header('Access-Control-Max-Age', '86400'); // Cache CORS for 24 hours
     if (req.method === 'OPTIONS') {
+        console.log('Handling OPTIONS request');
         return res.sendStatus(200);
     }
     next();
@@ -34,11 +36,12 @@ let chatHistory = [];
 async function queryOpenAI(context, question) {
     try {
         const messages = [
-            { role: 'system', content: `Answer the question using this JSON data: ${JSON.stringify(context)}. Do not repeat the data in your response.` },
+            { role: 'system', content: `Answer using this JSON data: ${JSON.stringify(context)}` },
             ...chatHistory.slice(-1), // Last message only
             { role: 'user', content: question }
         ];
 
+        console.log('Sending to OpenAI:', question);
         const response = await fetch(OPENAI_API_URL, {
             method: 'POST',
             headers: {
@@ -48,7 +51,7 @@ async function queryOpenAI(context, question) {
             body: JSON.stringify({
                 model: 'gpt-3.5-turbo',
                 messages: messages,
-                max_tokens: 75, // Increased slightly for clarity, still minimal
+                max_tokens: 75,
                 temperature: 0.5
             })
         });
@@ -59,8 +62,8 @@ async function queryOpenAI(context, question) {
         const data = await response.json();
         const answer = data.choices[0].message.content.trim();
 
-        // Update chat history
         chatHistory = [{ role: 'user', content: question }, { role: 'assistant', content: answer }];
+        console.log('OpenAI response:', answer);
         return answer;
     } catch (error) {
         console.error('OpenAI API Error:', error.message);
@@ -72,6 +75,7 @@ async function queryOpenAI(context, question) {
 app.post('/api/assistant', async (req, res) => {
     const { question } = req.body;
     const lowerQuestion = question.toLowerCase();
+    console.log('Received question:', question);
 
     try {
         // Fetch data from Supabase
