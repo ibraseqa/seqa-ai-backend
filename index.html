@@ -143,6 +143,7 @@
             border: none;
             border-radius: 50%;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             cursor: pointer;
@@ -150,27 +151,27 @@
             z-index: 12;
         }
         .toggle-arrow span {
-            width: 20px;
+            width: 24px;
             height: 2px;
             background: #fff;
-            margin: 2px 0;
+            margin: 3px 0;
+            border-radius: 2px;
             transition: all 0.3s ease;
         }
         .sidebar-container:not(.expanded):hover .toggle-arrow {
             background: rgba(255, 255, 255, 0.2);
         }
-        .sidebar.expanded .toggle-arrow {
-            background: rgba(255, 255, 255, 0.15);
-        }
         .sidebar.expanded .toggle-arrow span:nth-child(1) {
-            transform: rotate(45deg) translate(5px, 5px);
+            transform: rotate(45deg) translate(6px, 6px);
         }
-        .sidebar.expanded .toggle-arrow span:nth-child(2) { opacity: 0; }
+        .sidebar.expanded .toggle-arrow span:nth-child(2) { 
+            opacity: 0; 
+        }
         .sidebar.expanded .toggle-arrow span:nth-child(3) {
-            transform: rotate(-45deg) translate(5px, -5px);
+            transform: rotate(-45deg) translate(6px, -6px);
         }
 
-        /* Modern Assistant Chat Styles */
+        /* Assistant Chat Styles */
         .assistant-container {
             display: none;
             position: absolute;
@@ -628,7 +629,7 @@
             <div class="assistant-message">Hello! I’m your AI assistant. Ask me anything about repair devices or salesmen!</div>
         </div>
         <div class="assistant-input">
-            <input type="text" id="assistantInput" placeholder="Type your question...">
+            <input type="text" id="assistantInput" placeholder="Type your question..." autocomplete="off">
             <button onclick="sendAssistantMessage()">Send</button>
         </div>
     </div>
@@ -1120,6 +1121,163 @@
                     break;
             }
             charts[chartId] = new Chart(context, { type: type, data: data, options: options });
+        }
+
+        function showFullscreenChart(chartId) {
+            ELEMENTS.fullscreenModal.classList.add('active');
+            const ctx = ELEMENTS.fullscreenChartCanvas.getContext('2d');
+            let data = {};
+            let options = {};
+
+            const fullscreenOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            font: { size: 14 },
+                            padding: 15,
+                            boxWidth: 30
+                        }
+                    },
+                    title: {
+                        display: true,
+                        font: { size: 20 },
+                        color: '#2d3748',
+                        padding: { top: 10, bottom: 20 }
+                    }
+                },
+                animation: false
+            };
+
+            const colorPalettes = {
+                salesmenBranchChart: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#D4A5A5', '#9B5DE5', '#F15BB5', '#FEE440', '#00BBF9', '#00F5D4', '#EF476F', '#FFD166', '#06D6A0', '#118AB2'],
+                salesmenDeviceChart: ['#FF9F1C', '#2AB7CA', '#FED766', '#E6E6EA', '#D4A5A5'],
+                salesmenPrinterChart: ['#9B5DE5', '#F15BB5', '#FEE440', '#00BBF9', '#00F5D4'],
+                repairChart: ['#EF476F', '#FFD166', '#06D6A0', '#118AB2', '#073B4C'],
+                salesmenStatusChart: ['#F94144', '#F3722C', '#F8961E', '#F9C74F', '#90BE6D'],
+                repairStatusChart: ['#43AA8B', '#577590', '#4D908E', '#277DA1', '#F9844A']
+            };
+
+            if (!charts[chartId]) return;
+            const chartType = charts[chartId].config.type;
+
+            switch (chartId) {
+                case 'salesmenBranchChart':
+                    const labels = isCompanyBranchView
+                        ? Object.keys(chartData.salesmenByCompanyBranch || {})
+                        : Object.keys(chartData.salesmenByCompany || {});
+                    const values = isCompanyBranchView
+                        ? Object.values(chartData.salesmenByCompanyBranch || {})
+                        : Object.values(chartData.salesmenByCompany || {});
+                    data = {
+                        labels: labels,
+                        datasets: [{
+                            label: isCompanyBranchView ? `Salesmen by Company & Branch (${chartData.totalSalesmen || 0})` : `Salesmen by Company (${chartData.totalSalesmen || 0})`,
+                            data: values,
+                            backgroundColor: chartType === 'bar' ? 'rgba(44, 110, 155, 0.7)' : colorPalettes.salesmenBranchChart.slice(0, labels.length),
+                            borderColor: chartType === 'bar' ? 'rgba(44, 110, 155, 1)' : colorPalettes.salesmenBranchChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = Object.assign({}, fullscreenOptions, {
+                        title: { ...fullscreenOptions.title, text: isCompanyBranchView ? 'Salesmen by Company & Branch' : 'Salesmen by Company' }
+                    });
+                    if (chartType === 'bar') options.scales = {
+                        y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                        x: { title: { display: true, text: isCompanyBranchView ? 'Company - Branch' : 'Company' } }
+                    };
+                    break;
+                case 'salesmenDeviceChart':
+                    data = {
+                        labels: Object.keys(chartData.salesmenByDeviceType || {}),
+                        datasets: [{
+                            label: `Salesmen by Device Type (${chartData.totalSalesmen || 0})`,
+                            data: Object.values(chartData.salesmenByDeviceType || {}),
+                            backgroundColor: chartType === 'bar' ? 'rgba(134, 188, 211, 0.7)' : colorPalettes.salesmenDeviceChart.slice(0, Object.keys(chartData.salesmenByDeviceType || {}).length),
+                            borderColor: chartType === 'bar' ? 'rgba(134, 188, 211, 1)' : colorPalettes.salesmenDeviceChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = Object.assign({}, fullscreenOptions, { title: { ...fullscreenOptions.title, text: 'Salesmen by Device Type' } });
+                    if (chartType === 'bar') options.scales = {
+                        y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                        x: { title: { display: true, text: 'Device Type' } }
+                    };
+                    break;
+                case 'salesmenPrinterChart':
+                    data = {
+                        labels: Object.keys(chartData.salesmenByPrinterType || {}),
+                        datasets: [{
+                            label: `Salesmen by Printer Type (${chartData.totalSalesmen || 0})`,
+                            data: Object.values(chartData.salesmenByPrinterType || {}),
+                            backgroundColor: chartType === 'bar' ? 'rgba(100, 150, 200, 0.7)' : colorPalettes.salesmenPrinterChart.slice(0, Object.keys(chartData.salesmenByPrinterType || {}).length),
+                            borderColor: chartType === 'bar' ? 'rgba(100, 150, 200, 1)' : colorPalettes.salesmenPrinterChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = Object.assign({}, fullscreenOptions, { title: { ...fullscreenOptions.title, text: 'Salesmen by Printer Type' } });
+                    if (chartType === 'bar') options.scales = {
+                        y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                        x: { title: { display: true, text: 'Printer Type' } }
+                    };
+                    break;
+                case 'repairChart':
+                    data = {
+                        labels: Object.keys(chartData.repairByCompanyBranch || {}),
+                        datasets: [{
+                            label: `Devices in Repair (${chartData.totalActiveRepair || 0})`,
+                            data: Object.values(chartData.repairByCompanyBranch || {}),
+                            backgroundColor: chartType === 'bar' ? 'rgba(229, 62, 62, 0.7)' : colorPalettes.repairChart.slice(0, Object.keys(chartData.repairByCompanyBranch || {}).length),
+                            borderColor: chartType === 'bar' ? 'rgba(229, 62, 62, 1)' : colorPalettes.repairChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = Object.assign({}, fullscreenOptions, { title: { ...fullscreenOptions.title, text: 'Devices in Repair' } });
+                    if (chartType === 'bar') options.scales = {
+                        y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                        x: { title: { display: true, text: 'Company - Branch' } }
+                    };
+                    break;
+                case 'salesmenStatusChart':
+                    data = {
+                        labels: Object.keys(chartData.salesmenByStatus || {}),
+                        datasets: [{
+                            label: `Salesmen by Status (${chartData.totalSalesmen || 0})`,
+                            data: Object.values(chartData.salesmenByStatus || {}),
+                            backgroundColor: chartType === 'bar' ? 'rgba(40, 167, 69, 0.7)' : colorPalettes.salesmenStatusChart.slice(0, Object.keys(chartData.salesmenByStatus || {}).length),
+                            borderColor: chartType === 'bar' ? 'rgba(40, 167, 69, 1)' : colorPalettes.salesmenStatusChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = Object.assign({}, fullscreenOptions, { title: { ...fullscreenOptions.title, text: 'Salesmen by Status' } });
+                    if (chartType === 'bar') options.scales = {
+                        y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                        x: { title: { display: true, text: 'Status' } }
+                    };
+                    break;
+                case 'repairStatusChart':
+                    data = {
+                        labels: Object.keys(chartData.repairByStatus || {}),
+                        datasets: [{
+                            label: `Repair Devices by Status (${chartData.totalRepair || 0})`,
+                            data: Object.values(chartData.repairByStatus || {}),
+                            backgroundColor: chartType === 'bar' ? 'rgba(255, 193, 7, 0.7)' : colorPalettes.repairStatusChart.slice(0, Object.keys(chartData.repairByStatus || {}).length),
+                            borderColor: chartType === 'bar' ? 'rgba(255, 193, 7, 1)' : colorPalettes.repairStatusChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = Object.assign({}, fullscreenOptions, { title: { ...fullscreenOptions.title, text: 'Repair Devices by Status' } });
+                    if (chartType === 'bar') options.scales = {
+                        y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                        x: { title: { display: true, text: 'Status' } }
+                    };
+                    break;
+            }
+
+            if (fullscreenChart) fullscreenChart.destroy();
+            fullscreenChart = new Chart(ctx, { type: chartType, data: data, options: options });
         }
 
         function closeFullscreenChart() {
