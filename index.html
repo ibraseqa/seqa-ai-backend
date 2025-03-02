@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seqa Management System</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=collapse_content" />
+    <style>
+        :root {
+            --primary: #1e3a5f;
+            --secondary: #2c6e9b;
+            --accent: #86bcd3;
+            --background: #f0f4f8;
+            --text: #2d3748;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --border-color: #e2e8f0;
+            --action-remove: #e53e3e;
+            --white: #ffffff;
+            --gray: #718096;
+            --transition: all 0.3s ease;
+            --login-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            display: flex;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        body.hidden { overflow: hidden; }
+
+        .sidebar-container {
+            position: fixed;
+            height: 100%;
+            width: 60px;
+            z-index: 11;
+            transition: width 0.4s ease;
+            background: linear-gradient(180deg, var(--primary), var(--secondary));
+            box-shadow: 2px 0 15px rgba(0, 0, 0, 0.15);
+            border-radius: 0 12px 12px 0;
+        }
+        .sidebar-container.expanded { width: 280px; border-radius: 0; }
+        .sidebar {
+            width: 100%;
+            background: transparent;
+            color: #fff;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            transition: padding 0.4s ease;
+        }
+        .sidebar.expanded { padding: 20px; }
+        .sidebar-header {
+            text-align: center;
+            margin-bottom: 30px;
+            opacity: 0;
+            transition: opacity 0.3s ease 0.1s;
+        }
+        .sidebar.expanded .sidebar-header { opacity: 1; }
+        .sidebar-header img {
+            width: 100px;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+        }
+        .sidebar-header h1 {
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .sidebar-nav {
+            opacity: 0;
+            transition: opacity 0.3s ease 0.1s;
+        }
+        .sidebar.expanded .sidebar-nav { opacity: 1; }
+        .sidebar-nav a {
+            display: block;
+            padding: 15px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 500;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: var(--transition);
+        }
+        .sidebar-nav a:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+        .sidebar-footer {
+            margin-top: auto;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s ease 0.1s;
+        }
+        .sidebar.expanded .sidebar-footer { opacity: 1; }
+        .logout-button {
+            background: var(--action-remove);
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            width: 100%;
+        }
+        .logout-button:hover {
+            background: #c53030;
+            transform: translateY(-2px);
+        }
+
+        .toggle-arrow {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: background 0.3s ease;
+            z-index: 12;
+        }
+        .toggle-arrow span {
+            width: 20px;
+            height: 2px;
+            background: #fff;
+            margin: 2px 0;
+            transition: all 0.3s ease;
+        }
+        .sidebar-container:not(.expanded):hover .toggle-arrow {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .sidebar.expanded .toggle-arrow {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        .sidebar.expanded .toggle-arrow span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+        .sidebar.expanded .toggle-arrow span:nth-child(2) { opacity: 0; }
+        .sidebar.expanded .toggle-arrow span:nth-child(3) {
+            transform: rotate(-45deg) translate(5px, -5px);
+        }
+
+        /* Assistant Chat Styles */
+        .assistant-container {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 280px;
+            width: 300px;
+            height: 100%;
+            background: var(--white);
+            box-shadow: var(--shadow);
+            z-index: 10;
+            transition: transform 0.3s ease;
+            transform: translateX(-100%);
+        }
+        .sidebar-container.expanded ~ .assistant-container.active {
+            display: block;
+            transform: translateX(0);
+        }
+        .assistant-header {
+            background: var(--primary);
+            color: #fff;
+            padding: 10px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .assistant-chat {
+            height: calc(100% - 80px);
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .assistant-message {
+            margin: 10px 0;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: #e2e8f0;
+            color: var(--text);
+            max-width: 80%;
+        }
+        .assistant-message.user {
+            background: var(--accent);
+            color: #fff;
+            margin-left: auto;
+            text-align: right;
+        }
+        .assistant-input {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .assistant-input input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .assistant-input button {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .assistant-input button:hover {
+            background: var(--secondary);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            margin-left: 60px;
+            overflow-y: auto;
+            display: none;
+            transition: margin-left 0.4s ease;
+        }
+        .sidebar-container.expanded ~ .main-content { margin-left: 280px; }
+        .sidebar-container.expanded ~ .assistant-container.active ~ .main-content { margin-left: 580px; }
+        .header {
+            background: var(--white);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .header h2 {
+            font-size: 24px;
+            color: var(--primary);
+            font-weight: 600;
+        }
+        .header p {
+            font-size: 14px;
+            color: var(--gray);
+            margin-top: 5px;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .chart-card {
+            background: var(--white);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 15px;
+            position: relative;
+        }
+        .chart-card h3 {
+            font-size: 16px;
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .chart-card h3:hover { color: var(--secondary); }
+        .chart-container {
+            height: 200px;
+            display: block;
+            position: relative;
+            padding-bottom: 35px;
+        }
+        .chart-container.hidden { display: none; }
+        canvas { width: 100% !important; height: 100% !important; }
+
+        .expand-icon {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            width: 24px;
+            height: 24px;
+            border: none;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: opacity 0.3s ease;
+            z-index: 1;
+        }
+        .expand-icon:hover { opacity: 1; }
+        .expand-icon svg {
+            width: 100%;
+            height: 100%;
+            fill: #808080;
+        }
+        .expand-icon:hover svg { fill: #000000; }
+
+        .toggle-view-icon {
+            position: absolute;
+            bottom: 5px;
+            right: 35px;
+            width: 24px;
+            height: 24px;
+            border: none;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: opacity 0.3s ease;
+            z-index: 1;
+        }
+        .toggle-view-icon:hover { opacity: 1; }
+        .toggle-view-icon svg {
+            width: 100%;
+            height: 100%;
+            fill: #808080;
+        }
+        .toggle-view-icon:hover svg { fill: #000000; }
+
+        .flipping {
+            animation: flipAnimation 0.5s ease-in-out;
+        }
+        @keyframes flipAnimation {
+            0% { transform: rotateY(0deg); }
+            100% { transform: rotateY(180deg); }
+        }
+
+        .fullscreen-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+        .fullscreen-modal.active { display: flex; }
+        .fullscreen-chart-container {
+            background: var(--white);
+            border-radius: 10px;
+            padding: 20px;
+            width: 90%;
+            height: 90%;
+            position: relative;
+            box-shadow: var(--shadow);
+        }
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--action-remove);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        .close-button:hover { background: #c53030; }
+
+        .stats-card {
+            background: var(--white);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 20px;
+            text-align: center;
+        }
+        .stats-card h3 {
+            font-size: 18px;
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .stats-card p {
+            font-size: 16px;
+            color: var(--text);
+            margin: 10px 0;
+        }
+        .stats-card .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--secondary);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+        .modal.active { display: flex; }
+        .login-modal-content {
+            max-width: 640px;
+            border-radius: 20px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            background: linear-gradient(135deg, #ffffff, #f8fafc);
+            box-shadow: var(--login-shadow);
+            position: relative;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        #loginModal.active .login-modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+        .login-header {
+            text-align: center;
+        }
+        .login-header img {
+            width: 120px;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+        .login-header h3 {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 0;
+            letter-spacing: 1px;
+        }
+        .login-greeting {
+            font-size: 18px;
+            color: var(--gray);
+            margin-top: 10px;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        .login-form label {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .login-form label span {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gray);
+            transition: all 0.3s ease;
+            pointer-events: none;
+            padding: 0 5px;
+        }
+        .login-form input:focus + span,
+        .login-form input:not(:placeholder-shown) + span {
+            top: -8px;
+            font-size: 12px;
+            color: var(--primary);
+        }
+        .login-form input {
+            padding: 14px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            background: #fff;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            width: 100%;
+        }
+        .login-form input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.2);
+            outline: none;
+        }
+        .login-form .password-wrapper { position: relative; }
+        .show-password {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--gray);
+            font-size: 14px;
+            cursor: pointer;
+            padding: 5px;
+            transition: color 0.3s ease;
+        }
+        .show-password:hover { color: var(--primary); }
+        .login-button {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: none;
+            transition: background 0.3s ease, transform 0.2s ease;
+            cursor: pointer;
+        }
+        .login-button:hover {
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            transform: translateY(-2px);
+        }
+        .error-message {
+            color: var(--action-remove);
+            font-size: 13px;
+            margin-top: 10px;
+            display: none;
+            text-align: center;
+            font-weight: 500;
+        }
+        .login-footer {
+            text-align: center;
+            font-size: 12px;
+            color: var(--gray);
+            opacity: 0.8;
+            font-weight: 400;
+        }
+        #loginModal {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        #loginModal.active { opacity: 1; }
+        #loginModal .login-modal-content {
+            transform: scale(0.95);
+            opacity: 0;
+        }
+        #loginModal.active .login-modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="hidden">
+    <div class="sidebar-container" id="sidebarContainer" style="display: none;">
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <img src="https://static.wixstatic.com/media/fdd745_d266b548f51c43cd8532994122bf4db6~mv2.png/v1/crop/x_0,y_0,w_1006,h_640/fill/w_121,h_77,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/seqa-lo.png" alt="Seqa Logo">
+                <h1>Seqa System</h1>
+            </div>
+            <div class="sidebar-nav">
+                <a href="salesmen.html">Salesmen Hub</a>
+                <a href="repairdevices.html">Repair Devices</a>
+                <a href="#" onclick="toggleAssistant()">Assistant</a>
+            </div>
+            <div class="sidebar-footer">
+                <button class="logout-button" onclick="logout()">Logout</button>
+            </div>
+        </div>
+        <span class="toggle-arrow" onclick="toggleSidebar()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </span>
+    </div>
+    <div class="assistant-container" id="assistantContainer">
+        <div class="assistant-header">Seqa Assistant</div>
+        <div class="assistant-chat" id="assistantChat">
+            <div class="assistant-message">Hello! I’m your AI assistant. Ask me anything about repair devices, salesmen, or predictions!</div>
+        </div>
+        <div class="assistant-input">
+            <input type="text" id="assistantInput" placeholder="Type your question...">
+            <button onclick="sendAssistantMessage()">Send</button>
+        </div>
+    </div>
+    <div class="main-content" id="mainContent">
+        <div class="header">
+            <h2>Seqa Management Dashboard</h2>
+            <p>Monitor and manage your salesmen and repair devices efficiently</p>
+        </div>
+        <div class="dashboard">
+            <div class="chart-card" data-chart-type="bar" data-chart-id="salesmenBranchChart">
+                <h3>Salesmen by Company & Branch</h3>
+                <div class="chart-container" id="salesmenBranchChartContainer">
+                    <button class="expand-icon" onclick="showFullscreenChart('salesmenBranchChart')">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px">
+                            <path d="M440-440v240h-80v-160H200v-80h240Zm160-320v160h160v80H520v-240h80Z"/>
+                        </svg>
+                    </button>
+                    <button class="toggle-view-icon" onclick="toggleCompanyBranchView()">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px">
+                            <path d="M360-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h160v80H200v560h160v80Zm80 80v-880h80v880h-80Zm160-80v-80h80v80h-80Zm0-640v-80h80v80h-80Zm160 640v-80h80q0 33-23.5 56.5T760-120Zm0-160v-80h80v80h-80Zm0-160v-80h80v80h-80Zm0-160v-80h80v80h-80Zm0-160v-80q33 0 56.5 23.5T840-760h-80Z"/>
+                        </svg>
+                    </button>
+                    <canvas id="salesmenBranchChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card" data-chart-type="bar" data-chart-id="salesmenDeviceChart">
+                <h3>Salesmen by Device Type</h3>
+                <div class="chart-container" id="salesmenDeviceChartContainer">
+                    <button class="expand-icon" onclick="showFullscreenChart('salesmenDeviceChart')">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px">
+                            <path d="M440-440v240h-80v-160H200v-80h240Zm160-320v160h160v80H520v-240h80Z"/>
+                        </svg>
+                    </button>
+                    <canvas id="salesmenDeviceChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card" data-chart-type="bar" data-chart-id="salesmenPrinterChart">
+                <h3>Salesmen by Printer Type</h3>
+                <div class="chart-container" id="salesmenPrinterChartContainer">
+                    <button class="expand-icon" onclick="showFullscreenChart('salesmenPrinterChart')">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px">
+                            <path d="M440-440v240h-80v-160H200v-80h240Zm160-320v160h160v80H520v-240h80Z"/>
+                        </svg>
+                    </button>
+                    <canvas id="salesmenPrinterChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card" data-chart-type="bar" data-chart-id="repairChart">
+                <h3>Devices in Repair</h3>
+                <div class="chart-container" id="repairChartContainer">
+                    <button class="expand-icon" onclick="showFullscreenChart('repairChart')">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px">
+                            <path d="M440-440v240h-80v-160H200v-80h240Zm160-320v160h160v80H520v-240h80Z"/>
+                        </svg>
+                    </button>
+                    <canvas id="repairChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card" data-chart-type="bar" data-chart-id="salesmenStatusChart">
+                <h3>Salesmen by Status</h3>
+                <div class="chart-container" id="salesmenStatusChartContainer">
+                    <button class="expand-icon" onclick="showFullscreenChart('salesmenStatusChart')">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px">
+                            <path d="M440-440v240h-80v-160H200v-80h240Zm160-320v160h160v80H520v-240h80Z"/>
+                        </svg>
+                    </button>
+                    <canvas id="salesmenStatusChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card" data-chart-type="bar" data-chart-id="repairStatusChart">
+                <h3>Repair Devices by Status</h3>
+                <div class="chart-container" id="repairStatusChartContainer">
+                    <button class="expand-icon" onclick="showFullscreenChart('repairStatusChart')">
+                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px">
+                            <path d="M440-440v240h-80v-160H200v-80h240Zm160-320v160h160v80H520v-240h80Z"/>
+                        </svg>
+                    </button>
+                    <canvas id="repairStatusChart"></canvas>
+                </div>
+            </div>
+            <div class="stats-card">
+                <h3>System Stats</h3>
+                <p>Total Salesmen: <span class="stat-value" id="totalSalesmen">0</span></p>
+                <p>Total Devices in Repair: <span class="stat-value" id="totalRepair">0</span></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="loginModal">
+        <div class="login-modal-content">
+            <div class="login-header">
+                <img src="https://static.wixstatic.com/media/fdd745_d266b548f51c43cd8532994122bf4db6~mv2.png/v1/crop/x_0,y_0,w_1006,h_640/fill/w_121,h_77,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/seqa-lo.png" alt="Seqa Logo">
+                <h3>Seqa Management</h3>
+                <p class="login-greeting" id="loginGreeting"></p>
+            </div>
+            <div class="login-form">
+                <label for="loginUsername">
+                    <input type="text" id="loginUsername" placeholder=" " required>
+                    <span>Username</span>
+                </label>
+                <label for="loginPassword" class="password-wrapper">
+                    <input type="text" id="loginPassword" placeholder=" " required>
+                    <span>Password</span>
+                    <button type="button" class="show-password" onclick="togglePassword()">Show</button>
+                </label>
+                <button class="login-button" onclick="login()">Sign In</button>
+                <p id="loginError" class="error-message">Invalid credentials. Please try again.</p>
+            </div>
+            <div class="login-footer">
+                <p>© 2025 Seqa. All Rights Reserved.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="fullscreen-modal" id="fullscreenModal">
+        <div class="fullscreen-chart-container">
+            <button class="close-button" onclick="closeFullscreenChart()">X</button>
+            <canvas id="fullscreenChartCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const supabase = window.supabase.createClient('https://beyzsnvccmkztgmltaqs.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJleXpzbnZjY21renRnbWx0YXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA0NzQ5MzYsImV4cCI6MjA1NjA1MDkzNn0.SmiXJ68HGuHToOdukpVtae2_HBMqd3rf7E7RIK-JInM');
+
+        const ELEMENTS = {
+            body: document.body,
+            sidebarContainer: document.getElementById("sidebarContainer"),
+            sidebar: document.getElementById("sidebar"),
+            mainContent: document.getElementById("mainContent"),
+            loginModal: document.getElementById("loginModal"),
+            loginUsername: document.getElementById("loginUsername"),
+            loginPassword: document.getElementById("loginPassword"),
+            loginError: document.getElementById("loginError"),
+            loginButton: document.querySelector(".login-button"),
+            loginGreeting: document.getElementById("loginGreeting"),
+            totalSalesmen: document.getElementById("totalSalesmen"),
+            totalRepair: document.getElementById("totalRepair"),
+            fullscreenModal: document.getElementById("fullscreenModal"),
+            fullscreenChartCanvas: document.getElementById("fullscreenChartCanvas"),
+            assistantContainer: document.getElementById("assistantContainer"),
+            assistantChat: document.getElementById("assistantChat"),
+            assistantInput: document.getElementById("assistantInput")
+        };
+
+        let currentUser = null;
+        let charts = {};
+        let chartData = {};
+        let repairDevices = [];
+        let fullscreenChart = null;
+        let isCompanyBranchView = true;
+
+        function showLogin() {
+            ELEMENTS.loginModal.classList.add("active");
+            ELEMENTS.body.classList.add("hidden");
+            ELEMENTS.sidebarContainer.style.display = "none";
+            ELEMENTS.mainContent.style.display = "none";
+            ELEMENTS.loginUsername.focus();
+            updateGreeting();
+        }
+
+        function showContent() {
+            ELEMENTS.loginModal.classList.remove("active");
+            ELEMENTS.body.classList.remove("hidden");
+            ELEMENTS.sidebarContainer.style.display = "block";
+            ELEMENTS.mainContent.style.display = "block";
+            loadDashboardData();
+        }
+
+        function toggleSidebar() {
+            ELEMENTS.sidebar.classList.toggle('expanded');
+            ELEMENTS.sidebarContainer.classList.toggle('expanded');
+        }
+
+        function toggleAssistant() {
+            ELEMENTS.assistantContainer.classList.toggle('active');
+            if (ELEMENTS.assistantContainer.classList.contains('active')) {
+                ELEMENTS.assistantInput.focus();
+            }
+        }
+
+        function updateGreeting() {
+            const hour = new Date().getHours();
+            let greeting = "Good Evening";
+            if (hour < 12) greeting = "Good Morning";
+            else if (hour < 18) greeting = "Good Afternoon";
+            ELEMENTS.loginGreeting.textContent = greeting;
+        }
+
+        function togglePassword() {
+            const passwordInput = ELEMENTS.loginPassword;
+            const toggleButton = document.querySelector(".show-password");
+            if (passwordInput.type === "password") {
+                passwordInput.type = "text";
+                toggleButton.textContent = "Hide";
+            } else {
+                passwordInput.type = "password";
+                toggleButton.textContent = "Show";
+            }
+        }
+
+        function login() {
+            const username = ELEMENTS.loginUsername.value.trim();
+            const password = ELEMENTS.loginPassword.value.trim();
+
+            supabase.from('users').select('username, password, role').eq('username', username).single()
+                .then(({ data, error }) => {
+                    if (error || !data || data.password !== password) {
+                        ELEMENTS.loginError.style.display = "block";
+                        console.error('Login error:', error ? error.message : 'Invalid credentials');
+                        return;
+                    }
+                    currentUser = username;
+                    localStorage.setItem('seqaSession', 'loggedIn');
+                    localStorage.setItem('seqaUser', username);
+                    ELEMENTS.loginError.style.display = "none";
+                    ELEMENTS.loginUsername.value = "";
+                    ELEMENTS.loginPassword.value = "";
+                    showContent();
+                });
+        }
+
+        function logout() {
+            localStorage.removeItem('seqaSession');
+            currentUser = null;
+            Object.values(charts).forEach(chart => chart.destroy());
+            charts = {};
+            if (fullscreenChart) fullscreenChart.destroy();
+            showLogin();
+        }
+
+        function calculateDaysBetween(dateStr, endDateStr = null) {
+            const start = new Date(dateStr);
+            const end = endDateStr ? new Date(endDateStr) : new Date();
+            if (isNaN(start) || isNaN(end)) return null;
+            const diffMs = end - start;
+            return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        }
+
+        function correctTypo(word) {
+            const corrections = {
+                "devcies": "devices",
+                "devicse": "devices",
+                "deivces": "devices",
+                "repiar": "repair",
+                "repai": "repair",
+                "repar": "repair",
+                "numbner": "number",
+                "coutn": "count",
+                "howm": "how",
+                "mnay": "many",
+                "eda25": "eda52",
+                "eda521": "eda52",
+                "eda": "eda52"
+            };
+            return corrections[word] || word;
+        }
+
+        function processQuestion(input) {
+            let words = input.toLowerCase().split(/\s+/).map(correctTypo);
+            const intent = { count: false, duration: false, type: null, repair: false };
+
+            // Detect intent
+            if (words.some(w => ["how", "many", "number", "count", "what"].includes(w))) intent.count = true;
+            if (words.some(w => ["long", "time", "duration", "days"].includes(w))) intent.duration = true;
+            if (words.some(w => ["repair", "repaired", "fix", "fixing"].includes(w))) intent.repair = true;
+            intent.type = words.find(w => ["eda52", "eda51", "eda50", "samsung", "pr3", "zebra"].includes(w)) || null;
+
+            // Process based on intent
+            if (intent.repair && intent.count) {
+                const inRepair = repairDevices.filter(d => d.status !== 'Completed');
+                if (intent.type) {
+                    const typeCount = inRepair.filter(d => (d.device_type === intent.type || d.printer_type === intent.type)).length;
+                    return `There are ${typeCount} ${intent.type.toUpperCase()} items currently in repair.`;
+                }
+                const deviceCount = inRepair.filter(d => d.device_type).length;
+                return words.includes("devices") || words.includes("device")
+                    ? `There are ${deviceCount} devices currently in repair.`
+                    : `There are ${inRepair.length} items (devices and printers) currently in repair.`;
+            }
+
+            if (intent.repair && intent.duration) {
+                const inRepair = repairDevices.filter(d => d.status !== 'Completed');
+                if (inRepair.length === 0) return "No devices or printers are currently in repair.";
+                if (intent.type) {
+                    const typeRepairs = inRepair.filter(d => (d.device_type === intent.type || d.printer_type === intent.type));
+                    if (typeRepairs.length === 0) return `No ${intent.type.toUpperCase()} items are currently in repair.`;
+                    const durations = typeRepairs.map(d => calculateDaysBetween(d.received_date));
+                    const avg = durations.reduce((a, b) => a + b, 0) / durations.length;
+                    return `${intent.type.toUpperCase()} items have been in repair for an average of ${Math.round(avg)} days.`;
+                }
+                const durations = inRepair.map(d => calculateDaysBetween(d.received_date));
+                const avg = durations.reduce((a, b) => a + b, 0) / durations.length;
+                return `Items have been in repair for an average of ${Math.round(avg)} days.`;
+            }
+
+            return "I didn’t quite catch that. Try asking about the number of devices in repair or how long they’ve been there!";
+        }
+
+        function sendAssistantMessage() {
+            const message = ELEMENTS.assistantInput.value.trim();
+            if (!message) return;
+
+            // Add user message
+            const userMessage = document.createElement('div');
+            userMessage.className = 'assistant-message user';
+            userMessage.textContent = message;
+            ELEMENTS.assistantChat.appendChild(userMessage);
+
+            // Process with AI-like understanding
+            const response = processQuestion(message);
+
+            // Add assistant response
+            const assistantMessage = document.createElement('div');
+            assistantMessage.className = 'assistant-message';
+            assistantMessage.textContent = response;
+            ELEMENTS.assistantChat.appendChild(assistantMessage);
+
+            // Clear input and scroll
+            ELEMENTS.assistantInput.value = "";
+            ELEMENTS.assistantChat.scrollTop = ELEMENTS.assistantChat.scrollHeight;
+        }
+
+        ELEMENTS.assistantInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") sendAssistantMessage();
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            if (localStorage.getItem('seqaSession') === 'loggedIn') {
+                showContent();
+            } else {
+                showLogin();
+            }
+        });
+
+        ELEMENTS.loginPassword.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") login();
+        });
+
+        ELEMENTS.loginButton.addEventListener("click", login);
+
+        function toggleChartType(event) {
+            const header = event.currentTarget;
+            const chartCard = header.closest('.chart-card');
+            const chartId = chartCard.dataset.chartId;
+            const currentType = chartCard.dataset.chartType;
+            const newType = currentType === "bar" ? "pie" : "bar";
+            chartCard.dataset.chartType = newType;
+
+            if (charts[chartId]) {
+                charts[chartId].destroy();
+            }
+            renderChart(chartId, newType);
+        }
+
+        function toggleCompanyBranchView() {
+            isCompanyBranchView = !isCompanyBranchView;
+            const chartId = 'salesmenBranchChart';
+            const chartType = charts[chartId] ? charts[chartId].config.type : 'bar';
+            const canvas = document.getElementById(chartId);
+
+            canvas.classList.add('flipping');
+            setTimeout(() => {
+                canvas.classList.remove('flipping');
+            }, 500);
+
+            document.querySelector('[data-chart-id="salesmenBranchChart"] h3').textContent = isCompanyBranchView ? "Salesmen by Company & Branch" : "Salesmen by Company";
+            if (charts[chartId]) {
+                charts[chartId].destroy();
+            }
+            renderChart(chartId, chartType);
+        }
+
+        function renderChart(chartId, type) {
+            const ctx = document.getElementById(chartId);
+            if (!ctx) return;
+            const context = ctx.getContext('2d');
+            let data = {};
+            let options = {};
+
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                    x: { title: { display: true } }
+                },
+                plugins: { legend: { position: 'top' } },
+                animation: false
+            };
+            const pieOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            font: { size: 12 },
+                            padding: 10,
+                            boxWidth: 20,
+                            generateLabels: (chart) => {
+                                const chartData = chart.data;
+                                return chartData.labels.map((label, i) => ({
+                                    text: label.length > 20 ? `${label.substring(0, 17)}...` : label,
+                                    fillStyle: chartData.datasets[0].backgroundColor[i],
+                                    hidden: !chart.getDataVisibility(i),
+                                    index: i
+                                }));
+                            }
+                        }
+                    }
+                },
+                animation: false
+            };
+
+            const colorPalettes = {
+                salesmenBranchChart: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#D4A5A5', '#9B5DE5', '#F15BB5', '#FEE440', '#00BBF9', '#00F5D4', '#EF476F', '#FFD166', '#06D6A0', '#118AB2'],
+                salesmenDeviceChart: ['#FF9F1C', '#2AB7CA', '#FED766', '#E6E6EA', '#D4A5A5'],
+                salesmenPrinterChart: ['#9B5DE5', '#F15BB5', '#FEE440', '#00BBF9', '#00F5D4'],
+                repairChart: ['#EF476F', '#FFD166', '#06D6A0', '#118AB2', '#073B4C'],
+                salesmenStatusChart: ['#F94144', '#F3722C', '#F8961E', '#F9C74F', '#90BE6D'],
+                repairStatusChart: ['#43AA8B', '#577590', '#4D908E', '#277DA1', '#F9844A']
+            };
+
+            switch (chartId) {
+                case 'salesmenBranchChart':
+                    const labels = isCompanyBranchView
+                        ? Object.keys(chartData.salesmenByCompanyBranch || {})
+                        : Object.keys(chartData.salesmenByCompany || {});
+                    const values = isCompanyBranchView
+                        ? Object.values(chartData.salesmenByCompanyBranch || {})
+                        : Object.values(chartData.salesmenByCompany || {});
+                    data = {
+                        labels: labels,
+                        datasets: [{
+                            label: isCompanyBranchView ? `Salesmen by Company & Branch (${chartData.totalSalesmen || 0})` : `Salesmen by Company (${chartData.totalSalesmen || 0})`,
+                            data: values,
+                            backgroundColor: type === 'bar' ? 'rgba(44, 110, 155, 0.7)' : colorPalettes.salesmenBranchChart.slice(0, labels.length),
+                            borderColor: type === 'bar' ? 'rgba(44, 110, 155, 1)' : colorPalettes.salesmenBranchChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = type === 'bar' ? Object.assign({}, chartOptions, {
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                            x: { title: { display: true, text: isCompanyBranchView ? 'Company - Branch' : 'Company' } }
+                        }
+                    }) : pieOptions;
+                    break;
+                case 'salesmenDeviceChart':
+                    data = {
+                        labels: Object.keys(chartData.salesmenByDeviceType || {}),
+                        datasets: [{
+                            label: `Salesmen by Device Type (${chartData.totalSalesmen || 0})`,
+                            data: Object.values(chartData.salesmenByDeviceType || {}),
+                            backgroundColor: type === 'bar' ? 'rgba(134, 188, 211, 0.7)' : colorPalettes.salesmenDeviceChart.slice(0, Object.keys(chartData.salesmenByDeviceType || {}).length),
+                            borderColor: type === 'bar' ? 'rgba(134, 188, 211, 1)' : colorPalettes.salesmenDeviceChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = type === 'bar' ? Object.assign({}, chartOptions, {
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                            x: { title: { display: true, text: 'Device Type' } }
+                        }
+                    }) : pieOptions;
+                    break;
+                case 'salesmenPrinterChart':
+                    data = {
+                        labels: Object.keys(chartData.salesmenByPrinterType || {}),
+                        datasets: [{
+                            label: `Salesmen by Printer Type (${chartData.totalSalesmen || 0})`,
+                            data: Object.values(chartData.salesmenByPrinterType || {}),
+                            backgroundColor: type === 'bar' ? 'rgba(100, 150, 200, 0.7)' : colorPalettes.salesmenPrinterChart.slice(0, Object.keys(chartData.salesmenByPrinterType || {}).length),
+                            borderColor: type === 'bar' ? 'rgba(100, 150, 200, 1)' : colorPalettes.salesmenPrinterChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = type === 'bar' ? Object.assign({}, chartOptions, {
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                            x: { title: { display: true, text: 'Printer Type' } }
+                        }
+                    }) : pieOptions;
+                    break;
+                case 'repairChart':
+                    data = {
+                        labels: Object.keys(chartData.repairByCompanyBranch || {}),
+                        datasets: [{
+                            label: `Devices in Repair (${chartData.totalActiveRepair || 0})`,
+                            data: Object.values(chartData.repairByCompanyBranch || {}),
+                            backgroundColor: type === 'bar' ? 'rgba(229, 62, 62, 0.7)' : colorPalettes.repairChart.slice(0, Object.keys(chartData.repairByCompanyBranch || {}).length),
+                            borderColor: type === 'bar' ? 'rgba(229, 62, 62, 1)' : colorPalettes.repairChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = type === 'bar' ? Object.assign({}, chartOptions, {
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                            x: { title: { display: true, text: 'Company - Branch' } }
+                        }
+                    }) : pieOptions;
+                    break;
+                case 'salesmenStatusChart':
+                    data = {
+                        labels: Object.keys(chartData.salesmenByStatus || {}),
+                        datasets: [{
+                            label: `Salesmen by Status (${chartData.totalSalesmen || 0})`,
+                            data: Object.values(chartData.salesmenByStatus || {}),
+                            backgroundColor: type === 'bar' ? 'rgba(40, 167, 69, 0.7)' : colorPalettes.salesmenStatusChart.slice(0, Object.keys(chartData.salesmenByStatus || {}).length),
+                            borderColor: type === 'bar' ? 'rgba(40, 167, 69, 1)' : colorPalettes.salesmenStatusChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = type === 'bar' ? Object.assign({}, chartOptions, {
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                            x: { title: { display: true, text: 'Status' } }
+                        }
+                    }) : pieOptions;
+                    break;
+                case 'repairStatusChart':
+                    data = {
+                        labels: Object.keys(chartData.repairByStatus || {}),
+                        datasets: [{
+                            label: `Repair Devices by Status (${chartData.totalRepair || 0})`,
+                            data: Object.values(chartData.repairByStatus || {}),
+                            backgroundColor: type === 'bar' ? 'rgba(255, 193, 7, 0.7)' : colorPalettes.repairStatusChart.slice(0, Object.keys(chartData.repairByStatus || {}).length),
+                            borderColor: type === 'bar' ? 'rgba(255, 193, 7, 1)' : colorPalettes.repairStatusChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = type === 'bar' ? Object.assign({}, chartOptions, {
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                            x: { title: { display: true, text: 'Status' } }
+                        }
+                    }) : pieOptions;
+                    break;
+            }
+            charts[chartId] = new Chart(context, { type: type, data: data, options: options });
+        }
+
+        function showFullscreenChart(chartId) {
+            ELEMENTS.fullscreenModal.classList.add('active');
+            const ctx = ELEMENTS.fullscreenChartCanvas.getContext('2d');
+            let data = {};
+            let options = {};
+
+            const fullscreenOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            font: { size: 14 },
+                            padding: 15,
+                            boxWidth: 30
+                        }
+                    },
+                    title: {
+                        display: true,
+                        font: { size: 20 },
+                        color: '#2d3748',
+                        padding: { top: 10, bottom: 20 }
+                    }
+                },
+                animation: false
+            };
+
+            const colorPalettes = {
+                salesmenBranchChart: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEEAD', '#D4A5A5', '#9B5DE5', '#F15BB5', '#FEE440', '#00BBF9', '#00F5D4', '#EF476F', '#FFD166', '#06D6A0', '#118AB2'],
+                salesmenDeviceChart: ['#FF9F1C', '#2AB7CA', '#FED766', '#E6E6EA', '#D4A5A5'],
+                salesmenPrinterChart: ['#9B5DE5', '#F15BB5', '#FEE440', '#00BBF9', '#00F5D4'],
+                repairChart: ['#EF476F', '#FFD166', '#06D6A0', '#118AB2', '#073B4C'],
+                salesmenStatusChart: ['#F94144', '#F3722C', '#F8961E', '#F9C74F', '#90BE6D'],
+                repairStatusChart: ['#43AA8B', '#577590', '#4D908E', '#277DA1', '#F9844A']
+            };
+
+            if (!charts[chartId]) return;
+            const chartType = charts[chartId].config.type;
+
+            switch (chartId) {
+                case 'salesmenBranchChart':
+                    const labels = isCompanyBranchView
+                        ? Object.keys(chartData.salesmenByCompanyBranch || {})
+                        : Object.keys(chartData.salesmenByCompany || {});
+                    const values = isCompanyBranchView
+                        ? Object.values(chartData.salesmenByCompanyBranch || {})
+                        : Object.values(chartData.salesmenByCompany || {});
+                    data = {
+                        labels: labels,
+                        datasets: [{
+                            label: isCompanyBranchView ? `Salesmen by Company & Branch (${chartData.totalSalesmen || 0})` : `Salesmen by Company (${chartData.totalSalesmen || 0})`,
+                            data: values,
+                            backgroundColor: chartType === 'bar' ? 'rgba(44, 110, 155, 0.7)' : colorPalettes.salesmenBranchChart.slice(0, labels.length),
+                            borderColor: chartType === 'bar' ? 'rgba(44, 110, 155, 1)' : colorPalettes.salesmenBranchChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = Object.assign({}, fullscreenOptions, {
+                        title: { ...fullscreenOptions.title, text: isCompanyBranchView ? 'Salesmen by Company & Branch' : 'Salesmen by Company' }
+                    });
+                    if (chartType === 'bar') options.scales = {
+                        y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                        x: { title: { display: true, text: isCompanyBranchView ? 'Company - Branch' : 'Company' } }
+                    };
+                    break;
+                case 'salesmenDeviceChart':
+                    data = {
+                        labels: Object.keys(chartData.salesmenByDeviceType || {}),
+                        datasets: [{
+                            label: `Salesmen by Device Type (${chartData.totalSalesmen || 0})`,
+                            data: Object.values(chartData.salesmenByDeviceType || {}),
+                            backgroundColor: chartType === 'bar' ? 'rgba(134, 188, 211, 0.7)' : colorPalettes.salesmenDeviceChart.slice(0, Object.keys(chartData.salesmenByDeviceType || {}).length),
+                            borderColor: chartType === 'bar' ? 'rgba(134, 188, 211, 1)' : colorPalettes.salesmenDeviceChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = Object.assign({}, fullscreenOptions, { title: { ...fullscreenOptions.title, text: 'Salesmen by Device Type' } });
+                    if (chartType === 'bar') options.scales = {
+                        y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                        x: { title: { display: true, text: 'Device Type' } }
+                    };
+                    break;
+                case 'salesmenPrinterChart':
+                    data = {
+                        labels: Object.keys(chartData.salesmenByPrinterType || {}),
+                        datasets: [{
+                            label: `Salesmen by Printer Type (${chartData.totalSalesmen || 0})`,
+                            data: Object.values(chartData.salesmenByPrinterType || {}),
+                            backgroundColor: chartType === 'bar' ? 'rgba(100, 150, 200, 0.7)' : colorPalettes.salesmenPrinterChart.slice(0, Object.keys(chartData.salesmenByPrinterType || {}).length),
+                            borderColor: chartType === 'bar' ? 'rgba(100, 150, 200, 1)' : colorPalettes.salesmenPrinterChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = Object.assign({}, fullscreenOptions, { title: { ...fullscreenOptions.title, text: 'Salesmen by Printer Type' } });
+                    if (chartType === 'bar') options.scales = {
+                        y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                        x: { title: { display: true, text: 'Printer Type' } }
+                    };
+                    break;
+                case 'repairChart':
+                    data = {
+                        labels: Object.keys(chartData.repairByCompanyBranch || {}),
+                        datasets: [{
+                            label: `Devices in Repair (${chartData.totalActiveRepair || 0})`,
+                            data: Object.values(chartData.repairByCompanyBranch || {}),
+                            backgroundColor: chartType === 'bar' ? 'rgba(229, 62, 62, 0.7)' : colorPalettes.repairChart.slice(0, Object.keys(chartData.repairByCompanyBranch || {}).length),
+                            borderColor: chartType === 'bar' ? 'rgba(229, 62, 62, 1)' : colorPalettes.repairChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = Object.assign({}, fullscreenOptions, { title: { ...fullscreenOptions.title, text: 'Devices in Repair' } });
+                    if (chartType === 'bar') options.scales = {
+                        y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                        x: { title: { display: true, text: 'Company - Branch' } }
+                    };
+                    break;
+                case 'salesmenStatusChart':
+                    data = {
+                        labels: Object.keys(chartData.salesmenByStatus || {}),
+                        datasets: [{
+                            label: `Salesmen by Status (${chartData.totalSalesmen || 0})`,
+                            data: Object.values(chartData.salesmenByStatus || {}),
+                            backgroundColor: chartType === 'bar' ? 'rgba(40, 167, 69, 0.7)' : colorPalettes.salesmenStatusChart.slice(0, Object.keys(chartData.salesmenByStatus || {}).length),
+                            borderColor: chartType === 'bar' ? 'rgba(40, 167, 69, 1)' : colorPalettes.salesmenStatusChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = Object.assign({}, fullscreenOptions, { title: { ...fullscreenOptions.title, text: 'Salesmen by Status' } });
+                    if (chartType === 'bar') options.scales = {
+                        y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                        x: { title: { display: true, text: 'Status' } }
+                    };
+                    break;
+                case 'repairStatusChart':
+                    data = {
+                        labels: Object.keys(chartData.repairByStatus || {}),
+                        datasets: [{
+                            label: `Repair Devices by Status (${chartData.totalRepair || 0})`,
+                            data: Object.values(chartData.repairByStatus || {}),
+                            backgroundColor: chartType === 'bar' ? 'rgba(255, 193, 7, 0.7)' : colorPalettes.repairStatusChart.slice(0, Object.keys(chartData.repairByStatus || {}).length),
+                            borderColor: chartType === 'bar' ? 'rgba(255, 193, 7, 1)' : colorPalettes.repairStatusChart.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    };
+                    options = Object.assign({}, fullscreenOptions, { title: { ...fullscreenOptions.title, text: 'Repair Devices by Status' } });
+                    if (chartType === 'bar') options.scales = {
+                        y: { beginAtZero: true, title: { display: true, text: 'Count' } },
+                        x: { title: { display: true, text: 'Status' } }
+                    };
+                    break;
+            }
+
+            if (fullscreenChart) fullscreenChart.destroy();
+            fullscreenChart = new Chart(ctx, { type: chartType, data: data, options: options });
+        }
+
+        function closeFullscreenChart() {
+            ELEMENTS.fullscreenModal.classList.remove('active');
+            if (fullscreenChart) {
+                fullscreenChart.destroy();
+                fullscreenChart = null;
+            }
+        }
+
+        async function loadDashboardData() {
+            try {
+                const { data: salesmenData, error: salesmenError } = await supabase.from('salesmen').select('company, branch, device_type, printer_type, verified, soti, salesbuzz');
+                const { data: repairData, error: repairError } = await supabase.from('repair_devices').select('company, branch, status, device_type, printer_type, received_date, repair_date');
+
+                if (salesmenError) {
+                    console.error('Error fetching salesmen:', salesmenError.message);
+                    return;
+                }
+                if (repairError) {
+                    console.error('Error fetching repair devices:', repairError.message);
+                    return;
+                }
+
+                const fetchedSalesmen = salesmenData || [];
+                repairDevices = repairData || [];
+
+                chartData = {
+                    salesmenByCompanyBranch: fetchedSalesmen.reduce((acc, { company, branch }) => {
+                        const key = `${company} - ${branch}`;
+                        acc[key] = (acc[key] || 0) + 1;
+                        return acc;
+                    }, {}),
+                    salesmenByCompany: fetchedSalesmen.reduce((acc, { company }) => {
+                        acc[company] = (acc[company] || 0) + 1;
+                        return acc;
+                    }, {}),
+                    salesmenByDeviceType: fetchedSalesmen.reduce((acc, { device_type }) => {
+                        acc[device_type] = (acc[device_type] || 0) + 1;
+                        return acc;
+                    }, {}),
+                    salesmenByPrinterType: fetchedSalesmen.reduce((acc, { printer_type }) => {
+                        acc[printer_type] = (acc[printer_type] || 0) + 1;
+                        return acc;
+                    }, {}),
+                    salesmenByStatus: {
+                        Verified: fetchedSalesmen.filter(s => s.verified).length,
+                        SOTI: fetchedSalesmen.filter(s => s.soti).length,
+                        SalesBuzz: fetchedSalesmen.filter(s => s.salesbuzz).length
+                    },
+                    totalSalesmen: fetchedSalesmen.length,
+                    repairByCompanyBranch: repairDevices.filter(r => r.status !== 'Completed').reduce((acc, { company, branch }) => {
+                        const key = `${company} - ${branch}`;
+                        acc[key] = (acc[key] || 0) + 1;
+                        return acc;
+                    }, {}),
+                    repairByStatus: repairDevices.reduce((acc, { status }) => {
+                        acc[status] = (acc[status] || 0) + 1;
+                        return acc;
+                    }, {}),
+                    totalRepair: repairDevices.length,
+                    totalActiveRepair: repairDevices.filter(r => r.status !== 'Completed').length
+                };
+
+                ELEMENTS.totalSalesmen.textContent = chartData.totalSalesmen;
+                ELEMENTS.totalRepair.textContent = chartData.totalActiveRepair;
+
+                renderChart('salesmenBranchChart', 'bar');
+                renderChart('salesmenDeviceChart', 'bar');
+                renderChart('salesmenPrinterChart', 'bar');
+                renderChart('repairChart', 'bar');
+                renderChart('salesmenStatusChart', 'bar');
+                renderChart('repairStatusChart', 'bar');
+
+                document.querySelectorAll('.chart-card h3').forEach(header => {
+                    header.removeEventListener('click', toggleChartType);
+                    header.addEventListener('click', toggleChartType);
+                });
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+            }
+        }
+    </script>
+</body>
+</html>
