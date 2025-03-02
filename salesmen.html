@@ -372,20 +372,6 @@
         .audit-action.edit { color: var(--audit-edit); }
         .audit-action.remove { color: var(--audit-remove); }
         .audit-action.toggle { color: var(--audit-toggle); }
-
-        /* Assistant Styles */
-        .assistant-container {
-            margin-top: 1rem;
-            padding: 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            background: #fff;
-            box-shadow: var(--shadow);
-        }
-        .assistant-container h3 { margin-bottom: 0.75rem; }
-        .assistant-input { display: flex; gap: 0.5rem; }
-        #assistantInput { flex: 1; padding: 0.5rem; }
-        #assistantAnswer { margin-top: 0.75rem; font-size: 0.9rem; white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -540,16 +526,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Assistant Section -->
-            <div class="assistant-container">
-                <h3>AI Assistant</h3>
-                <div class="assistant-input">
-                    <input type="text" id="assistantInput" placeholder="Ask about salesmen..." required>
-                    <button onclick="askAssistant()">Ask</button>
-                </div>
-                <div id="assistantAnswer"></div>
-            </div>
         </section>
     </main>
 
@@ -665,9 +641,7 @@
             repairModal: document.getElementById("repairModal"),
             repairReason: document.getElementById("repairReason"),
             actionModal: document.getElementById("actionModal"),
-            actionChoice: document.getElementById("actionChoice"),
-            assistantInput: document.getElementById("assistantInput"),
-            assistantAnswer: document.getElementById("assistantAnswer")
+            actionChoice: document.getElementById("actionChoice")
         };
 
         let currentUser = null;
@@ -690,7 +664,6 @@
             ELEMENTS.companyFilter.addEventListener('change', filterTable);
             ELEMENTS.branchFilter.addEventListener('change', filterTable);
             ELEMENTS.printerSerialFilter.addEventListener('keyup', filterTable);
-            ELEMENTS.assistantInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') askAssistant(); });
         });
 
         const toggleMenu = () => ELEMENTS.headerButtons.classList.toggle("active");
@@ -840,6 +813,7 @@
             const id = row.dataset.id;
             if (!confirm(`Are you sure you want to delete ${row.cells[0].textContent}?`)) return;
 
+            // Fetch the row data before deletion for undo
             const { data: salesmanData, error: fetchError } = await supabase.from('salesmen').select('*').eq('id', id).single();
             if (fetchError) {
                 console.error('Error fetching salesman for undo:', fetchError.message);
@@ -861,13 +835,14 @@
         };
 
         const editSalesman = row => {
-            if (!row || editingRow) return;
+            if (!row || editingRow) return; // Prevent multiple edits
             editingRow = row;
-            for (let i = 0; i < row.cells.length - 1; i++) {
-                if (i === 8 || i === 9 || i === 10 || i === 5 || i === 7) continue;
+            for (let i = 0; i < row.cells.length - 1; i++) { // Exclude Comments column for now
+                if (i === 8 || i === 9 || i === 10 || i === 5 || i === 7) continue; // Skip checkboxes, device_serial, printer_serial
                 const currentValue = row.cells[i].textContent;
                 row.cells[i].innerHTML = `<input type="text" value="${currentValue}" style="width: 100%; padding: 0.2rem;">`;
             }
+            // Replace Comments with Save button
             row.cells[13].innerHTML = `<button class="modal-button confirm-button" onclick="showSaveModal()">Save</button>`;
         };
 
@@ -906,12 +881,12 @@
             logAction("Edit Salesman", `${updatedData.name} (Device Serial: ${editingRow.cells[5].textContent}, Printer Serial: ${editingRow.cells[7].textContent})`, editingRow);
             closeModal();
             editingRow = null;
-            loadSalesmen();
+            loadSalesmen(); // Refresh table to restore original state
         };
 
         const cancelEdit = () => { 
             if (editingRow) {
-                loadSalesmen();
+                loadSalesmen(); // Reload to revert changes
                 editingRow = null;
             }
             closeModal();
@@ -919,7 +894,7 @@
 
         const showRepairModal = (row, type) => {
             repairItemRow = row;
-            repairItemType = type;
+            repairItemType = type; // "device" or "printer"
             ELEMENTS.repairModal.style.display = "flex";
             ELEMENTS.repairReason.value = "";
         };
@@ -1017,6 +992,7 @@
             if (!lastDeletedRows.length) return;
             const { data: salesmanData } = lastDeletedRows[0];
 
+            // Remove the id field to let the database assign a new one
             const { id, ...insertData } = salesmanData;
 
             const { error } = await supabase.from('salesmen').insert(insertData);
@@ -1359,9 +1335,9 @@
                     const cell = row.insertCell();
                     if (index === 8 || index === 9 || index === 10) {
                         cell.innerHTML = `<input type="checkbox" class="status-checkbox" ${val ? "checked" : ""} onchange="toggleStatus(this, ${index})">`;
-                    } else if (index === 5) {
+                    } else if (index === 5) { // Device Serial
                         cell.innerHTML = `<span class="device-serial">${val}</span>`;
-                    } else if (index === 7) {
+                    } else if (index === 7) { // Printer Serial
                         cell.innerHTML = `<span class="printer-serial">${val}</span>`;
                     } else {
                         cell.textContent = val;
@@ -1377,32 +1353,6 @@
             });
             filterTable();
             updatePagination();
-        };
-
-        const askAssistant = async () => {
-            const question = ELEMENTS.assistantInput.value.trim();
-            if (!question) return;
-
-            ELEMENTS.assistantAnswer.textContent = 'Loading...';
-
-            try {
-                const response = await fetch('https://seqa-ai-backend.onrender.com/api/assistant', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question }),
-                    timeout: 15000 // 15s timeout for OpenAI
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Network response was not ok: ${response.status}`);
-                }
-
-                const data = await response.json();
-                ELEMENTS.assistantAnswer.textContent = data.answer || 'No answer received.';
-            } catch (error) {
-                console.error('Assistant fetch error:', error);
-                ELEMENTS.assistantAnswer.textContent = `Error connecting to assistant: ${error.message}`;
-            }
         };
 
         ELEMENTS.rowsPerPage.value = rowsPerPage;
