@@ -26,17 +26,33 @@ let chatHistory = [];
 
 async function queryOpenAI(context, question) {
     try {
-        const totalSalesmen = context.salesmen.length; // Pre-calculate for clarity
+        const totalSalesmen = context.salesmen.length;
+        const alsadCount = context.salesmen.filter(s => s.company === 'ALSAD').length;
+        const alsadJeddahCount = context.salesmen.filter(s => s.company === 'ALSAD' && s.branch === 'Jeddah').length;
+        const deviceTypes = context.salesmen.reduce((acc, s) => {
+            acc[s.device_type] = (acc[s.device_type] || 0) + 1;
+            return acc;
+        }, {});
+        const eda51Count = deviceTypes['EDA51'] || 0;
+        const eda52Count = deviceTypes['EDA52'] || 0;
+
         const messages = [
             { 
                 role: 'system', 
-                content: `You are a helpful assistant. Use this JSON data: ${JSON.stringify(context)}. The salesmen list has ${totalSalesmen} entries, each with one device unless specified. Answer in concise, natural language without repeating the JSON. Maintain context from prior questions—stick to the last mentioned company/branch unless specified otherwise.` 
+                content: `You are a precise assistant. Use this JSON data: ${JSON.stringify(context)}. Total salesmen: ${totalSalesmen}. ALSAD total: ${alsadCount}. ALSAD Jeddah: ${alsadJeddahCount}. Device type counts: EDA51: ${eda51Count}, EDA52: ${eda52Count}. Answer in concise, natural language without repeating the JSON. Use these exact counts where applicable. Maintain context from prior questions—stick to the last mentioned company/branch unless specified otherwise.` 
             },
             ...chatHistory.slice(-4),
             { role: 'user', content: question }
         ];
 
-        console.log('Sending to OpenAI:', { question, total_salesmen: totalSalesmen, repair_devices: context.repair_devices.length });
+        console.log('Sending to OpenAI:', { 
+            question, 
+            total_salesmen: totalSalesmen, 
+            alsad: alsadCount, 
+            alsad_jeddah: alsadJeddahCount, 
+            eda51: eda51Count, 
+            eda52: eda52Count 
+        });
         const response = await fetch(OPENAI_API_URL, {
             method: 'POST',
             headers: {
@@ -47,7 +63,7 @@ async function queryOpenAI(context, question) {
                 model: 'gpt-3.5-turbo',
                 messages: messages,
                 max_tokens: 75,
-                temperature: 0.5
+                temperature: 0.3
             })
         });
 
