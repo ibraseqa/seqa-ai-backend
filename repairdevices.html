@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seqa Repair Devices</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <style>
+        :root {
+            --primary: #1e3a5f;
+            --secondary: #2c6e9b;
+            --accent: #86bcd3;
+            --background: #f5f7fa;
+            --text: #2d3748;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --border-color: #d1d5db;
+            --hover-bg: #f1f5f9;
+            --transition: all 0.3s ease;
+            --action-edit: #38a169;
+            --action-remove: #e53e3e;
+            --audit-add: #28a745;
+            --audit-edit: #007bff;
+            --audit-remove: #dc3545;
+            --audit-toggle: #ffc107;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.4;
+            font-size: 14px;
+        }
+
+        header {
+            background: var(--primary);
+            color: #fff;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+        }
+        header img {
+            height: 35px;
+        }
+        header h1 {
+            font-size: 20px;
+            margin-left: 15px;
+            font-weight: 500;
+        }
+        .header-button {
+            background: var(--accent);
+            color: var(--text);
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .header-button:hover {
+            background: var(--secondary);
+        }
+
+        main {
+            padding: 15px;
+        }
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+        h3 {
+            color: var(--primary);
+            font-size: 22px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--primary);
+            padding-bottom: 5px;
+        }
+
+        .form-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 6px;
+        }
+        .form-container label {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        input[type="text"], select {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+            width: 100%;
+            transition: var(--transition);
+        }
+        input[type="text"]:focus, select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.2);
+            outline: none;
+        }
+        button {
+            background: var(--primary);
+            color: #fff;
+            padding: 8px 15px;
+            border: 1px solid var(--primary);
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        button:hover {
+            background: var(--secondary);
+            border-color: var(--secondary);
+        }
+
+        .filter-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 6px;
+            background: var(--background);
+        }
+        .filter-container input, .filter-container select {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+            width: 130px;
+        }
+        .filter-container input:focus, .filter-container select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.2);
+        }
+
+        .table-container {
+            border: 1px solid var(--border-color);
+            border-radius: 10px 10px 0 0;
+            overflow-y: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+        }
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        th {
+            background: var(--secondary);
+            color: #fff;
+            text-transform: uppercase;
+            position: sticky;
+            top: 0;
+        }
+        th:hover {
+            background: var(--primary);
+        }
+        tr:hover {
+            background: var(--hover-bg);
+        }
+        .status-select {
+            padding: 5px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .edit-button {
+            background: var(--action-edit);
+            color: #fff;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        .edit-button:hover {
+            background: #2f855a;
+        }
+        .delete-button {
+            background: var(--action-remove);
+            color: #fff;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .delete-button:hover {
+            background: #c53030;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #fff;
+            padding: 1.5rem;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 350px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+        .modal-button {
+            margin: 0.3rem;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: var(--transition);
+            border: 1px solid transparent;
+        }
+        .confirm-button { background: #38a169; border-color: #38a169; }
+        .confirm-button:hover { background: #2f855a; border-color: #2f855a; }
+        .cancel-button { background: #e53e3e; border-color: #e53e3e; }
+        .cancel-button:hover { background: #c53030; border-color: #c53030; }
+        #auditModal .modal-content { max-width: 500px; }
+        #auditLogList { max-height: 300px; overflow-y: auto; list-style: none; padding: 0; margin: 0.75rem 0; }
+        #auditLogList li { padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; }
+        .audit-entry { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .audit-entry span { display: inline-block; }
+        .audit-timestamp { font-weight: bold; }
+        .audit-user { color: #6c757d; }
+        .audit-action { font-weight: 600; }
+        .audit-action.add { color: var(--audit-add); }
+        .audit-action.edit { color: var(--audit-edit); }
+        .audit-action.remove { color: var(--audit-remove); }
+        .audit-action.toggle { color: var(--audit-toggle); }
+    </style>
+</head>
+<body>
+    <header>
+        <div style="display: flex; align-items: center;">
+            <img src="https://static.wixstatic.com/media/fdd745_d266b548f51c43cd8532994122bf4db6~mv2.png/v1/crop/x_0,y_0,w_1006,h_640/fill/w_121,h_77,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/seqa-lo.png" alt="Seqa Logo">
+            <h1>Repair Devices</h1>
+        </div>
+        <div>
+            <button class="header-button" onclick="showAuditModal()">Audit Log</button>
+            <a href="index.html"><button class="header-button">Back to Home</button></a>
+        </div>
+    </header>
+    <main>
+        <section class="container">
+            <h3>Add Repair Device/Printer</h3>
+            <div class="form-container">
+                <label>Item Type: 
+                    <select id="itemType" required>
+                        <option value="">Select Item Type</option>
+                        <option value="device">Device</option>
+                        <option value="printer">Printer</option>
+                    </select>
+                </label>
+                <label>Type: 
+                    <select id="deviceType" required>
+                        <option value="">Select Type</option>
+                        <option value="EDA51">EDA 51</option>
+                        <option value="EDA52">EDA 52</option>
+                        <option value="EDA50">EDA 50</option>
+                        <option value="Samsung">Samsung</option>
+                        <option value="PR3">PR3</option>
+                        <option value="ZEBRA">ZEBRA</option>
+                    </select>
+                </label>
+                <label>Serial Number: <input type="text" id="serialNumber" required></label>
+                <label>Branch: 
+                    <select id="branch" required>
+                        <option value="">Select Branch</option>
+                        <option value="Asir">Asir</option>
+                        <option value="Jeddah">Jeddah</option>
+                        <option value="Almadinah">Almadinah</option>
+                        <option value="Makkah">Makkah</option>
+                        <option value="Riyadh">Riyadh</option>
+                        <option value="Dammam">Dammam</option>
+                        <option value="Jizan">Jizan</option>
+                        <option value="Hail">Hail</option>
+                        <option value="Qassim">Qassim</option>
+                    </select>
+                </label>
+                <label>Company: 
+                    <select id="company" required>
+                        <option value="">Select Company</option>
+                        <option value="Zulal">Zulal</option>
+                        <option value="Sehatik">Sehatik</option>
+                        <option value="Alshafiya">Alshafiya</option>
+                        <option value="Rhine">Rhine</option>
+                        <option value="Ramah">Ramah</option>
+                        <option value="ALSAD">ALSAD</option>
+                    </select>
+                </label>
+                <label>Delivered By: <input type="text" id="deliveredBy" required></label>
+                <label>Issue: 
+                    <select id="issue" required>
+                        <option value="">Select Issue</option>
+                        <option value="Screen Cracked">Screen Cracked</option>
+                        <option value="Battery Failure">Battery Failure</option>
+                        <option value="Software Issue">Software Issue</option>
+                        <option value="Hardware Failure">Hardware Failure</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </label>
+                <label>Status: 
+                    <select id="status" required>
+                        <option value="">Select Status</option>
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </label>
+                <label>Received Date: <input type="text" id="receivedDate" placeholder="MM/DD/YYYY" required></label>
+                <button onclick="addDevice()">Add Item</button>
+            </div>
+
+            <div class="filter-container">
+                <select id="itemTypeFilter" onchange="filterTable()">
+                    <option value="">All Item Types</option>
+                    <option value="device">Device</option>
+                    <option value="printer">Printer</option>
+                </select>
+                <select id="deviceTypeFilter" onchange="filterTable()">
+                    <option value="">All Types</option>
+                    <option value="EDA51">EDA 51</option>
+                    <option value="EDA52">EDA 52</option>
+                    <option value="EDA50">EDA 50</option>
+                    <option value="Samsung">Samsung</option>
+                    <option value="PR3">PR3</option>
+                    <option value="ZEBRA">ZEBRA</option>
+                </select>
+                <input type="text" id="serialFilter" placeholder="Serial Number..." onkeyup="filterTable()">
+                <select id="branchFilter" onchange="filterTable()">
+                    <option value="">All Branches</option>
+                    <option value="Asir">Asir</option>
+                    <option value="Jeddah">Jeddah</option>
+                    <option value="Almadinah">Almadinah</option>
+                    <option value="Makkah">Makkah</option>
+                    <option value="Riyadh">Riyadh</option>
+                    <option value="Dammam">Dammam</option>
+                    <option value="Jizan">Jizan</option>
+                    <option value="Hail">Hail</option>
+                    <option value="Qassim">Qassim</option>
+                </select>
+                <select id="companyFilter" onchange="filterTable()">
+                    <option value="">All Companies</option>
+                    <option value="Zulal">Zulal</option>
+                    <option value="Sehatik">Sehatik</option>
+                    <option value="Alshafiya">Alshafiya</option>
+                    <option value="Rhine">Rhine</option>
+                    <option value="Ramah">Ramah</option>
+                    <option value="ALSAD">ALSAD</option>
+                </select>
+                <select id="statusFilter" onchange="filterTable()">
+                    <option value="">All Statuses</option>
+                    <option value="Pending">Pending</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Completed">Completed</option>
+                </select>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item Type</th>
+                            <th>Type</th>
+                            <th>Serial Number</th>
+                            <th>Branch</th>
+                            <th>Company</th>
+                            <th>Delivered By</th>
+                            <th>Issue</th>
+                            <th>Status</th>
+                            <th>Received Date</th>
+                            <th>Repair Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="repairTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div class="modal" id="confirmationModal">
+        <div class="modal-content">
+            <p>Are you sure you want to delete this item?</p>
+            <button class="modal-button confirm-button" id="confirmDelete">Confirm</button>
+            <button class="modal-button cancel-button" onclick="closeModal('confirmationModal')">Cancel</button>
+        </div>
+    </div>
+
+    <div class="modal" id="auditModal">
+        <div class="modal-content">
+            <h3>Audit Log</h3>
+            <input type="text" id="auditSearch" placeholder="Search log..." onkeyup="filterAuditLog()">
+            <ul id="auditLogList"></ul>
+            <button class="modal-button confirm-button" onclick="downloadAuditLog()">Download Log</button>
+            <button class="modal-button cancel-button" onclick="closeModal('auditModal')">Close</button>
+        </div>
+    </div>
+
+    <script>
+        const supabase = window.supabase.createClient('https://beyzsnvccmkztgmltaqs.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJleXpzbnZjY21renRnbWx0YXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA0NzQ5MzYsImV4cCI6MjA1NjA1MDkzNn0.SmiXJ68HGuHToOdukpVtae2_HBMqd3rf7E7RIK-JInM');
+
+        const ELEMENTS = {
+            repairTableBody: document.getElementById("repairTableBody"),
+            confirmationModal: document.getElementById("confirmationModal"),
+            confirmDelete: document.getElementById("confirmDelete"),
+            auditModal: document.getElementById("auditModal"),
+            auditLogList: document.getElementById("auditLogList"),
+            auditSearch: document.getElementById("auditSearch"),
+            itemTypeFilter: document.getElementById("itemTypeFilter"),
+            deviceTypeFilter: document.getElementById("deviceTypeFilter"),
+            serialFilter: document.getElementById("serialFilter"),
+            branchFilter: document.getElementById("branchFilter"),
+            companyFilter: document.getElementById("companyFilter"),
+            statusFilter: document.getElementById("statusFilter")
+        };
+
+        let currentUser = null;
+        let auditLog = [];
+        const AUDIT_LOG_LIMIT = 100;
+        let deleteDeviceId = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            currentUser = localStorage.getItem('seqaUser') || 'Unknown';
+            auditLog = JSON.parse(localStorage.getItem('repairDevicesAuditLog')) || [];
+            if (localStorage.getItem('seqaSession') !== 'loggedIn') {
+                window.location.href = 'index.html';
+            } else {
+                loadDevices();
+            }
+        });
+
+        const logAction = (action, details) => {
+            const timestamp = new Date().toLocaleString();
+            const user = currentUser;
+            auditLog.push({ timestamp, user, action, details });
+            if (auditLog.length > AUDIT_LOG_LIMIT) auditLog = auditLog.slice(-AUDIT_LOG_LIMIT);
+            localStorage.setItem('repairDevicesAuditLog', JSON.stringify(auditLog));
+        };
+
+        const loadDevices = async () => {
+            const { data, error } = await supabase.from('repair_devices').select('*');
+            if (error) {
+                console.error('Error loading devices:', error.message);
+                return;
+            }
+            ELEMENTS.repairTableBody.innerHTML = "";
+            data.forEach(device => {
+                const row = ELEMENTS.repairTableBody.insertRow();
+                row.dataset.id = device.id;
+                row.dataset.salesmanId = device.salesman_id || '';
+                const itemType = device.device_type ? "device" : "printer";
+                const type = device.device_type || device.printer_type || "N/A";
+                row.innerHTML = `
+                    <td>${itemType}</td>
+                    <td>${type}</td>
+                    <td>${device.serial_number}</td>
+                    <td>${device.branch}</td>
+                    <td>${device.company}</td>
+                    <td>${device.delivered_by}</td>
+                    <td>${device.issue}</td>
+                    <td>
+                        <select class="status-select" onchange="updateStatus(this, '${device.id}', '${device.serial_number}', '${device.salesman_id}', '${itemType}')">
+                            <option value="Pending" ${device.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                            <option value="In Progress" ${device.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="Completed" ${device.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                        </select>
+                    </td>
+                    <td>${device.received_date}</td>
+                    <td>${device.repair_date || 'N/A'}</td>
+                    <td>
+                        <button class="edit-button" onclick="updateRepairDate('${device.id}', '${itemType}')">Set Repair Date</button>
+                        <button class="delete-button" onclick="showDeleteModal('${device.id}')">Delete</button>
+                    </td>
+                `;
+            });
+            filterTable();
+        };
+
+        const addDevice = async () => {
+            const itemType = document.getElementById("itemType").value;
+            const inputs = {
+                salesman_id: null,
+                device_type: itemType === "device" ? document.getElementById("deviceType").value : null,
+                printer_type: itemType === "printer" ? document.getElementById("deviceType").value : null,
+                serial_number: document.getElementById("serialNumber").value.trim(),
+                branch: document.getElementById("branch").value,
+                company: document.getElementById("company").value,
+                delivered_by: document.getElementById("deliveredBy").value.trim(),
+                issue: document.getElementById("issue").value,
+                status: document.getElementById("status").value,
+                received_date: document.getElementById("receivedDate").value.trim(),
+                repair_date: null
+            };
+
+            if (!itemType || !inputs[itemType === "device" ? "device_type" : "printer_type"] || Object.values(inputs).slice(3, 9).some(val => !val)) {
+                alert("Please fill in all required fields.");
+                return;
+            }
+
+            const { error } = await supabase.from('repair_devices').insert(inputs);
+            if (error) {
+                console.error('Error adding item:', error.message);
+                alert("Failed to add item: " + error.message);
+                return;
+            }
+
+            logAction(`Add ${itemType === "device" ? "Device" : "Printer"}`, `Serial: ${inputs.serial_number} (Issue: ${inputs.issue})`);
+            document.getElementById("itemType").value = "";
+            document.getElementById("deviceType").value = "";
+            document.getElementById("serialNumber").value = "";
+            document.getElementById("branch").value = "";
+            document.getElementById("company").value = "";
+            document.getElementById("deliveredBy").value = "";
+            document.getElementById("issue").value = "";
+            document.getElementById("status").value = "";
+            document.getElementById("receivedDate").value = "";
+            loadDevices();
+        };
+
+        const updateStatus = async (select, id, serialNumber, salesmanId, itemType) => {
+            const newStatus = select.value;
+            const repairDate = newStatus === 'Completed' ? new Date().toLocaleDateString() : null;
+            const updateData = { status: newStatus, repair_date: repairDate };
+
+            const { error } = await supabase.from('repair_devices').update(updateData).eq('id', id);
+            if (error) {
+                console.error('Error updating status:', error.message);
+                alert("Failed to update status: " + error.message);
+                return;
+            }
+
+            if (newStatus === 'Completed' && salesmanId) {
+                const updateField = itemType === "device" ? "device_serial" : "printer_serial";
+                const { error: salesmanError } = await supabase
+                    .from('salesmen')
+                    .update({ [updateField]: serialNumber, edited_date: new Date().toLocaleDateString() })
+                    .eq('id', salesmanId);
+                if (salesmanError) {
+                    console.error('Error returning item to salesman:', salesmanError.message);
+                    alert("Failed to return item to salesman: " + salesmanError.message);
+                    return;
+                }
+
+                const { error: deleteError } = await supabase.from('repair_devices').delete().eq('id', id);
+                if (deleteError) {
+                    console.error('Error deleting completed item:', deleteError.message);
+                    alert("Failed to delete completed item: " + deleteError.message);
+                    return;
+                }
+
+                logAction(`${itemType === "device" ? "Device" : "Printer"} Repair Completed`, `Serial: ${serialNumber} returned to Salesman ID: ${salesmanId}`);
+            } else {
+                logAction("Update Status", `Serial: ${serialNumber} - Status to ${newStatus}`);
+            }
+
+            loadDevices();
+        };
+
+        const updateRepairDate = async (id, itemType) => {
+            const repairDate = prompt("Enter repair date (MM/DD/YYYY):", new Date().toLocaleDateString());
+            if (repairDate) {
+                const { error } = await supabase.from('repair_devices').update({ repair_date: repairDate, status: 'Completed' }).eq('id', id);
+                if (error) {
+                    console.error('Error updating repair date:', error.message);
+                    alert("Failed to update repair date: " + error.message);
+                    return;
+                }
+                const device = (await supabase.from('repair_devices').select('*').eq('id', id).single()).data;
+                if (device.salesman_id) {
+                    const updateField = itemType === "device" ? "device_serial" : "printer_serial";
+                    const { error: salesmanError } = await supabase
+                        .from('salesmen')
+                        .update({ [updateField]: device.serial_number, edited_date: new Date().toLocaleDateString() })
+                        .eq('id', device.salesman_id);
+                    if (salesmanError) {
+                        console.error('Error returning item to salesman:', salesmanError.message);
+                        alert("Failed to return item to salesman: " + salesmanError.message);
+                        return;
+                    }
+
+                    const { error: deleteError } = await supabase.from('repair_devices').delete().eq('id', id);
+                    if (deleteError) {
+                        console.error('Error deleting completed item:', deleteError.message);
+                        alert("Failed to delete completed item: " + deleteError.message);
+                        return;
+                    }
+
+                    logAction(`${itemType === "device" ? "Device" : "Printer"} Repair Completed`, `Serial: ${device.serial_number} returned to Salesman ID: ${device.salesman_id}`);
+                } else {
+                    logAction("Update Repair Date", `Serial: ${device.serial_number} - Repair Date set to ${repairDate}`);
+                }
+                loadDevices();
+            }
+        };
+
+        const showDeleteModal = id => {
+            deleteDeviceId = id;
+            ELEMENTS.confirmationModal.style.display = "flex";
+            ELEMENTS.confirmDelete.onclick = () => deleteDevice(id);
+        };
+
+        const closeModal = modalId => {
+            document.getElementById(modalId).style.display = "none";
+            deleteDeviceId = null;
+        };
+
+        const deleteDevice = async id => {
+            const { data: device, error: fetchError } = await supabase.from('repair_devices').select('*').eq('id', id).single();
+            if (fetchError) {
+                console.error('Error fetching item:', fetchError.message);
+                alert("Failed to fetch item: " + fetchError.message);
+                return;
+            }
+
+            const { error } = await supabase.from('repair_devices').delete().eq('id', id);
+            if (error) {
+                console.error('Error deleting item:', error.message);
+                alert("Failed to delete item: " + error.message);
+                return;
+            }
+
+            const itemType = device.device_type ? "Device" : "Printer";
+            logAction(`Delete ${itemType}`, `Serial: ${device.serial_number}`);
+            closeModal('confirmationModal');
+            loadDevices();
+        };
+
+        const filterTable = () => {
+            const filters = {
+                itemType: ELEMENTS.itemTypeFilter.value,
+                type: ELEMENTS.deviceTypeFilter.value,
+                serial: ELEMENTS.serialFilter.value.toLowerCase(),
+                branch: ELEMENTS.branchFilter.value,
+                company: ELEMENTS.companyFilter.value,
+                status: ELEMENTS.statusFilter.value
+            };
+            Array.from(ELEMENTS.repairTableBody.rows).forEach(row => {
+                const [itemType, type, serial, branch, company, , , status] = row.cells;
+                const matches = (
+                    (!filters.itemType || itemType.textContent === filters.itemType) &&
+                    (!filters.type || type.textContent === filters.type) &&
+                    serial.textContent.toLowerCase().includes(filters.serial) &&
+                    (!filters.branch || branch.textContent === filters.branch) &&
+                    (!filters.company || company.textContent === filters.company) &&
+                    (!filters.status || status.querySelector('.status-select').value === filters.status)
+                );
+                row.style.display = matches ? "" : "none";
+            });
+        };
+
+        const showAuditModal = () => {
+            ELEMENTS.auditLogList.innerHTML = auditLog.map(entry => `
+                <li class="audit-entry">
+                    <span class="audit-timestamp">${entry.timestamp}</span>
+                    <span class="audit-user">[${entry.user}]</span>
+                    <span class="audit-action ${entry.action.toLowerCase().split(' ')[0]}">${entry.action}</span>
+                    <span class="audit-details">${entry.details}</span>
+                </li>
+            `).join('');
+            ELEMENTS.auditModal.style.display = "flex";
+        };
+
+        const filterAuditLog = () => {
+            const searchTerm = ELEMENTS.auditSearch.value.toLowerCase();
+            ELEMENTS.auditLogList.innerHTML = auditLog
+                .filter(entry => `${entry.timestamp} ${entry.user} ${entry.action} ${entry.details}`.toLowerCase().includes(searchTerm))
+                .map(entry => `
+                    <li class="audit-entry">
+                        <span class="audit-timestamp">${entry.timestamp}</span>
+                        <span class="audit-user">[${entry.user}]</span>
+                        <span class="audit-action ${entry.action.toLowerCase().split(' ')[0]}">${entry.action}</span>
+                        <span class="audit-details">${entry.details}</span>
+                    </li>
+                `).join('');
+        };
+
+        const downloadAuditLog = () => {
+            const logText = auditLog.map(entry => `${entry.timestamp} [${entry.user}] ${entry.action}: ${entry.details}`).join('\n');
+            const blob = new Blob([logText], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `Repair_Devices_Audit_Log_${new Date().toISOString().slice(0, 10)}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            closeModal('auditModal');
+        };
+
+        document.addEventListener('click', e => {
+            if (!e.target.closest('#auditModal') && ELEMENTS.auditModal.style.display === "flex" && !e.target.closest('.header-button')) {
+                closeModal('auditModal');
+            }
+        });
+    </script>
+</body>
+</html>
