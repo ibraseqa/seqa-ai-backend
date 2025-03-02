@@ -171,13 +171,12 @@
             transform: rotate(-45deg) translate(6px, -6px);
         }
 
-        /* Assistant Chat Styles */
         .assistant-container {
             display: none;
             position: absolute;
             top: 0;
-            left: 280px;
-            width: 340px;
+            left: 300px;
+            width: 450px;
             height: 100%;
             background: var(--chat-bg);
             box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
@@ -220,6 +219,15 @@
             line-height: 1.5;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             transition: transform 0.2s ease;
+            position: relative;
+        }
+        .assistant-message::after {
+            content: attr(data-timestamp);
+            font-size: 10px;
+            color: #999;
+            position: absolute;
+            bottom: -16px;
+            left: 16px;
         }
         .assistant-message.user {
             background: linear-gradient(135deg, var(--chat-user), #357abd);
@@ -227,6 +235,10 @@
             margin-left: auto;
             text-align: left;
             box-shadow: 0 2px 6px rgba(74, 144, 226, 0.3);
+        }
+        .assistant-message.user::after {
+            left: auto;
+            right: 16px;
         }
         .assistant-message:hover {
             transform: translateY(-2px);
@@ -283,7 +295,7 @@
             transition: margin-left 0.4s ease;
         }
         .sidebar-container.expanded ~ .main-content { margin-left: 300px; }
-        .sidebar-container.expanded ~ .assistant-container.active ~ .main-content { margin-left: 640px; }
+        .sidebar-container.expanded ~ .assistant-container.active ~ .main-content { margin-left: 750px; }
         .header {
             background: var(--white);
             padding: 20px;
@@ -866,6 +878,7 @@
             const userMessage = document.createElement('div');
             userMessage.className = 'assistant-message user';
             userMessage.textContent = message;
+            userMessage.setAttribute('data-timestamp', new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
             ELEMENTS.assistantChat.appendChild(userMessage);
 
             ELEMENTS.assistantInput.disabled = true;
@@ -887,12 +900,14 @@
                 const assistantMessage = document.createElement('div');
                 assistantMessage.className = 'assistant-message';
                 assistantMessage.textContent = data.answer || 'No answer received.';
+                assistantMessage.setAttribute('data-timestamp', new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
                 ELEMENTS.assistantChat.appendChild(assistantMessage);
             } catch (error) {
                 console.error('Assistant fetch error:', error);
                 const errorMessage = document.createElement('div');
                 errorMessage.className = 'assistant-message';
                 errorMessage.textContent = `Sorry, I couldn’t process that: ${error.message}. Try again!`;
+                errorMessage.setAttribute('data-timestamp', new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
                 ELEMENTS.assistantChat.appendChild(errorMessage);
             }
 
