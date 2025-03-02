@@ -8,13 +8,14 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Max-Age', '86400'); // Cache CORS for 24 hours
     if (req.method === 'OPTIONS') {
         return res.sendStatus(200);
     }
     next();
 });
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Increase payload limit
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -33,7 +34,7 @@ let chatHistory = [];
 async function queryOpenAI(context, question) {
     try {
         const messages = [
-            { role: 'system', content: 'Answer using this JSON data: ' + JSON.stringify(context) },
+            { role: 'system', content: `Answer the question using this JSON data: ${JSON.stringify(context)}. Do not repeat the data in your response.` },
             ...chatHistory.slice(-1), // Last message only
             { role: 'user', content: question }
         ];
@@ -47,8 +48,8 @@ async function queryOpenAI(context, question) {
             body: JSON.stringify({
                 model: 'gpt-3.5-turbo',
                 messages: messages,
-                max_tokens: 50, // Reduced for minimal output
-                temperature: 0.5 // Lower for concise answers
+                max_tokens: 75, // Increased slightly for clarity, still minimal
+                temperature: 0.5
             })
         });
         if (!response.ok) {
