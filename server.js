@@ -4,44 +4,37 @@ const fetch = require('node-fetch');
 
 const app = express();
 
-// CORS middleware with explicit settings
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Max-Age', '86400'); // Cache CORS for 24 hours
     if (req.method === 'OPTIONS') {
-        console.log('Handling OPTIONS request');
         return res.sendStatus(200);
     }
     next();
 });
 
-app.use(express.json({ limit: '10mb' })); // Increase payload limit
+app.use(express.json({ limit: '10mb' }));
 
-// Initialize Supabase client
 const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_KEY
+    process.env.SUPABASE_URL || 'https://beyzsnvccmkztgmltaqs.supabase.co',
+    process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJleXpzbnZjY21renRnbWx0YXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA0NzQ5MzYsImV4cCI6MjA1NjA1MDkzNn0.SmiXJ68HGuHToOdukpVtae2_HBMqd3rf7E7RIK-JInM'
 );
 
-// OpenAI API setup
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// Chat history for minimal context
 let chatHistory = [];
 
-// Helper to query OpenAI API (gpt-3.5-turbo)
 async function queryOpenAI(context, question) {
     try {
         const messages = [
-            { role: 'system', content: `Answer using this JSON data: ${JSON.stringify(context)}` },
-            ...chatHistory.slice(-1), // Last message only
+            { role: 'system', content: `Answer using this JSON data: ${JSON.stringify(context)}. Do not repeat the data in your response.` },
+            ...chatHistory.slice(-1),
             { role: 'user', content: question }
         ];
 
-        console.log('Sending to OpenAI:', question);
+        console.log('Sending to OpenAI with question:', question);
         const response = await fetch(OPENAI_API_URL, {
             method: 'POST',
             headers: {
@@ -55,70 +48,66 @@ async function queryOpenAI(context, question) {
                 temperature: 0.5
             })
         });
+
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`OpenAI API returned status ${response.status}: ${errorText}`);
+            throw new Error(`OpenAI API error ${response.status}: ${errorText}`);
         }
+
         const data = await response.json();
         const answer = data.choices[0].message.content.trim();
-
         chatHistory = [{ role: 'user', content: question }, { role: 'assistant', content: answer }];
         console.log('OpenAI response:', answer);
         return answer;
     } catch (error) {
         console.error('OpenAI API Error:', error.message);
-        return `Error: ${error.message}`;
+        return `Sorry, I hit an issue with the AI service: ${error.message}`;
     }
 }
 
-// API endpoint for assistant
 app.post('/api/assistant', async (req, res) => {
     const { question } = req.body;
-    const lowerQuestion = question.toLowerCase();
+    if (!question) {
+        return res.status(400).json({ answer: 'Please provide a question!' });
+    }
+
     console.log('Received question:', question);
 
     try {
-        // Fetch data from Supabase
-        console.log('Fetching salesmen...');
+        console.log('Fetching salesmen data...');
         const { data: salesmen, error: salesmenError } = await supabase.from('salesmen').select('*');
-        if (salesmenError) throw new Error('Failed to fetch salesmen: ' + salesmenError.message);
+        if (salesmenError) {
+            console.error('Salesmen fetch error:', salesmenError.message);
+            throw new Error(`Failed to fetch salesmen: ${salesmenError.message}`);
+        }
         console.log('Salesmen fetched:', salesmen.length);
 
-        console.log('Fetching repair_devices...');
+        console.log('Fetching repair_devices data...');
         const { data: repairDevices, error: repairError } = await supabase.from('repair_devices').select('*');
-        if (repairError) throw new Error('Failed to fetch repair devices: ' + repairError.message);
+        if (repairError) {
+            console.error('Repair devices fetch error:', repairError.message);
+            throw new Error(`Failed to fetch repair devices: ${repairError.message}`);
+        }
         console.log('Repair devices fetched:', repairDevices.length);
 
-        if ((!salesmen || salesmen.length === 0) && (!repairDevices || repairDevices.length === 0)) {
-            res.json({ answer: 'No data found—check Supabase!' });
-            return;
+        const context = {
+            salesmen: salesmen || [],
+            repair_devices: repairDevices || []
+        };
+
+        if (context.salesmen.length === 0 && context.repair_devices.length === 0) {
+            return res.json({ answer: 'No data available in the system—check Supabase!' });
         }
 
-        // Determine relevant context
-        const isSalesmen = /salesm[ae]n|list/i.test(lowerQuestion);
-        const isDevices = /device|repair/i.test(lowerQuestion);
-        const context = isSalesmen && !isDevices ? { salesmen } : 
-                        isDevices && !isSalesmen ? { repair_devices: repairDevices } : 
-                        { salesmen, repair_devices };
-
-        // Query OpenAI API
         const answer = await queryOpenAI(context, question);
-
-        // Handle casual greetings
-        if (['hi', 'hello', 'hey'].includes(lowerQuestion.trim())) {
-            res.json({ answer: "Hi! Ask about salesmen or repair devices." });
-            return;
-        }
-
         res.json({ answer });
 
     } catch (error) {
-        console.error('Error:', error.message);
-        res.status(500).json({ answer: 'Oops, something broke: ' + error.message });
+        console.error('Server error:', error.message);
+        res.status(500).json({ answer: `Server error: ${error.message}` });
     }
 });
 
-// Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
