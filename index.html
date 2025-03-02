@@ -820,7 +820,6 @@
             const message = ELEMENTS.assistantInput.value.trim();
             if (!message) return;
 
-            // Add user message
             const userMessage = document.createElement('div');
             userMessage.className = 'assistant-message user';
             userMessage.textContent = message;
@@ -834,7 +833,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ question: message }),
-                    timeout: 15000
+                    signal: AbortSignal.timeout(15000) // 15s timeout
                 });
 
                 if (!response.ok) {
@@ -850,7 +849,7 @@
                 console.error('Assistant fetch error:', error);
                 const errorMessage = document.createElement('div');
                 errorMessage.className = 'assistant-message';
-                errorMessage.textContent = `Error: ${error.message}`;
+                errorMessage.textContent = `Sorry, I couldn’t process that: ${error.message}. Try again!`;
                 ELEMENTS.assistantChat.appendChild(errorMessage);
             }
 
