@@ -172,7 +172,7 @@
     <div class="modal" id="confirmationModal"><div class="modal-content"><p id="confirmationMessage">Do you want to save the changes?</p><button class="modal-button confirm-button" onclick="confirmEdit()">Confirm</button><button class="modal-button cancel-button" onclick="cancelEdit()">Cancel</button></div></div>
     <div class="modal" id="repairModal"><div class="modal-content"><p>Send to Repair</p><select id="repairReason" required><option value="">Select Reason</option><option value="Screen Cracked">Screen Cracked</option><option value="Battery Failure">Battery Failure</option><option value="Software Issue">Software Issue</option><option value="Hardware Failure">Hardware Failure</option><option value="Other">Other</option></select><button class="modal-button confirm-button" onclick="confirmSendToRepair()">Send</button><button class="modal-button cancel-button" onclick="closeRepairModal()">Cancel</button></div></div>
     <div class="modal" id="actionModal"><div class="modal-content"><p>Select Action</p><select id="actionChoice" required><option value="">Choose an Action</option><option value="edit">Edit</option><option value="remove">Remove</option><option value="comment">Comment</option></select><button class="modal-button confirm-button" onclick="executeAction()">Execute</button><button class="modal-button cancel-button" onclick="closeActionModal()">Cancel</button></div></div>
-    <div id="commentOverlay"></div><div id="commentPopup"><h3>Edit Comment</h3><textarea id="commentText" rows="5" placeholder="Enter your comment here..."></textarea><button class="modal-button confirm-button" id="saveCommentBtn">Save Comment</button><button class="modal-button cancel-button" id="closePopupBtn">Close</button></div>
+    <div id="commentOverlay"></div><div id="commentPopup"><h3>Edit Comment</h3><textarea id="commentText" rows="5" placeholder="Enter your comment here..."></textarea><button class="modal-button confirm-button" onclick="saveComment()">Save Comment</button><button class="modal-button cancel-button" onclick="closeCommentPopup()">Close</button></div>
     <div id="exportPopup" class="modal"><div class="modal-content"><p>Choose Export Format</p><button class="modal-button confirm-button" onclick="exportToExcel()">Export to Excel</button><button class="modal-button confirm-button" onclick="exportToPDF()">Export to PDF</button><button class="modal-button cancel-button" onclick="closeExportPopup()">Cancel</button></div></div>
     <div id="statsOverlay"></div><div id="statsPopup"><h3>Quick Stats</h3><ul id="statsList"></ul><button class="modal-button cancel-button" onclick="closeStatsPopup()">Close</button></div>
     <div id="reportOverlay"></div><div id="reportPopup"><h3>Generate Report</h3><p>Download a detailed HTML report of all salesmen.</p><button class="modal-button confirm-button" onclick="downloadReport()">Download Report</button><button class="modal-button cancel-button" onclick="closeReportPopup()">Cancel</button></div>
@@ -181,7 +181,7 @@
     <script>
         const supabase = window.supabase.createClient('https://beyzsnvccmkztgmltaqs.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJleXpzbnZjY21renRnbWx0YXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA0NzQ5MzYsImV4cCI6MjA1NjA1MDkzNn0.SmiXJ68HGuHToOdukpVtae2_HBMqd3rf7E7RIK-JInM');
         let currentUser = localStorage.getItem('seqaUser') || 'Unknown';
-        let editingRow = null, currentRow = null, lastDeletedRows = [], auditLog = JSON.parse(localStorage.getItem('salesmenAuditLog')) || [], sortColumn = -1, sortDirection = 1;
+        let editingRow = null, currentRow = null, lastDeletedRows = [], auditLog = [], sortColumn = -1, sortDirection = 1;
         let currentPage = 1, rowsPerPage = 10;
         const AUDIT_LOG_LIMIT = 100;
         let repairItemRow = null, repairItemType = null, actionRow = null;
@@ -223,16 +223,41 @@
             if (localStorage.getItem('seqaSession') !== 'loggedIn') window.location.href = 'index.html';
             else loadSalesmen();
             ELEMENTS.rowsPerPage.value = rowsPerPage;
+            loadAuditLog();
         });
 
         function toggleMenu() { ELEMENTS.headerButtons.classList.toggle("active"); }
 
-        function logAction(action, details, row = null) {
+        async function logAction(action, details) {
             const timestamp = new Date().toLocaleString();
-            const entryDetails = action === "Edit Salesman" && row ? `${details} - Changes: ${Array.from(row.cells).slice(0, -1).map((c, i) => i !== 8 && i !== 9 && i !== 10 && c.textContent !== editingRow.cells[i].textContent ? `${['Name', 'SalesBuzz Code', 'Company', 'Branch', 'Device Type', 'Device Serial', 'Printer Type', 'Printer Serial', 'Verified', 'SOTI', 'SalesBuzz', 'Added Date', 'Edited Date', 'Comments'][i]}: "${editingRow.cells[i].textContent}" -> "${c.textContent}"` : '').filter(Boolean).join(", ")}` : details;
-            auditLog.push({ timestamp, user: currentUser, action, details: entryDetails });
-            if (auditLog.length > AUDIT_LOG_LIMIT) auditLog = auditLog.slice(-AUDIT_LOG_LIMIT);
-            localStorage.setItem('salesmenAuditLog', JSON.stringify(auditLog));
+            const entry = { timestamp, user: currentUser, action, details };
+            const { error } = await supabase.from('audit_log').insert(entry);
+            if (error) console.error('Error logging action:', error.message);
+            else {
+                auditLog.push(entry);
+                if (auditLog.length > AUDIT_LOG_LIMIT) auditLog.shift();
+                updateAuditLogDisplay();
+            }
+        }
+
+        async function loadAuditLog() {
+            const { data, error } = await supabase.from('audit_log').select('*').order('timestamp', { ascending: false }).limit(AUDIT_LOG_LIMIT);
+            if (error) console.error('Error loading audit log:', error.message);
+            else {
+                auditLog = data.reverse();
+                updateAuditLogDisplay();
+            }
+        }
+
+        function updateAuditLogDisplay() {
+            ELEMENTS.auditLogList.innerHTML = auditLog.map(entry => `
+                <li class="audit-entry">
+                    <span class="audit-timestamp">${entry.timestamp}</span>
+                    <span class="audit-user">[${entry.user}]</span>
+                    <span class="audit-action ${entry.action.toLowerCase().split(' ')[0]}">${entry.action}</span>
+                    <span class="audit-details">${entry.details}</span>
+                </li>
+            `).join('');
         }
 
         async function checkDuplicates(deviceSerial, printerSerial, salesbuzzCode, company, excludeId = null) {
@@ -265,7 +290,7 @@
                 salesbuzz: document.getElementById("salesBuzz").checked,
                 added_date: new Date().toLocaleDateString(),
                 edited_date: null,
-                comments: null
+                comments: ''
             };
             if (Object.values(inputs).slice(0, 8).some(val => !val)) return alert("Please fill in all required fields.");
             if (await checkDuplicates(inputs.device_serial, inputs.printer_serial, inputs.salesbuzz_code, inputs.company)) return alert("A salesman with this Device Serial, Printer Serial, or SalesBuzz Code and Company combination already exists.");
@@ -302,7 +327,7 @@
                         salesbuzz: data[10].trim() === "1",
                         added_date: new Date().toLocaleDateString(),
                         edited_date: null,
-                        comments: null
+                        comments: ''
                     };
                     if (await checkDuplicates(cleanedData.device_serial, cleanedData.printer_serial, cleanedData.salesbuzz_code, cleanedData.company)) {
                         hasDuplicates = true;
@@ -340,12 +365,10 @@
             if (fetchError) return alert("Failed to fetch salesman data: " + fetchError.message);
             const { error } = await supabase.from('salesmen').delete().eq('id', id);
             if (error) return alert("Failed to delete salesman: " + error.message);
-            lastDeletedRows = [{ data: salesmanData, index: row.rowIndex }];
+            lastDeletedRows = [salesmanData];
             logAction("Remove Salesman", `${row.cells[0].textContent} (Device Serial: ${row.cells[5].textContent}, Printer Serial: ${row.cells[7].textContent})`);
-            row.remove();
             ELEMENTS.undoButton.disabled = false;
-            filterTable();
-            updatePagination();
+            loadSalesmen();
         }
 
         function editSalesman(row) {
@@ -378,7 +401,7 @@
             if (await checkDuplicates(editingRow.cells[5].textContent, editingRow.cells[7].textContent, updatedData.salesbuzz_code, updatedData.company, id)) return alert("This Device Serial, Printer Serial, or SalesBuzz Code and Company combination is already in use.");
             const { error } = await supabase.from('salesmen').update(updatedData).eq('id', id);
             if (error) return alert("Failed to edit salesman: " + error.message);
-            logAction("Edit Salesman", `${updatedData.name} (Device Serial: ${editingRow.cells[5].textContent}, Printer Serial: ${editingRow.cells[7].textContent})`, editingRow);
+            logAction("Edit Salesman", `${updatedData.name} (Device Serial: ${editingRow.cells[5].textContent}, Printer Serial: ${editingRow.cells[7].textContent})`);
             ELEMENTS.confirmationModal.style.display = "none";
             editingRow = null;
             loadSalesmen();
@@ -453,14 +476,16 @@
             switch (action) {
                 case "edit": editSalesman(actionRow); break;
                 case "remove": removeRow(actionRow); break;
-                case "comment":
-                    currentRow = actionRow;
-                    ELEMENTS.commentText.value = currentRow.cells[13].textContent || '';
-                    ELEMENTS.commentPopup.style.display = 'block';
-                    ELEMENTS.commentOverlay.style.display = 'block';
-                    break;
+                case "comment": showCommentPopup(actionRow); break;
             }
             closeActionModal();
+        }
+
+        function showCommentPopup(row) {
+            currentRow = row;
+            ELEMENTS.commentText.value = row.cells[13].textContent || '';
+            ELEMENTS.commentPopup.style.display = 'block';
+            ELEMENTS.commentOverlay.style.display = 'block';
         }
 
         async function saveComment() {
@@ -469,17 +494,20 @@
             const comment = ELEMENTS.commentText.value.trim();
             const { error } = await supabase.from('salesmen').update({ comments: comment, edited_date: new Date().toLocaleDateString() }).eq('id', id);
             if (error) return alert("Failed to update comment: " + error.message);
-            logAction("Update Comment", `${currentRow.cells[0].textContent} - Comment changed from "${currentRow.cells[13].textContent}" to "${comment}"`);
+            logAction("Update Comment", `${currentRow.cells[0].textContent} - Comment changed to "${comment}"`);
             currentRow.cells[13].textContent = comment;
+            closeCommentPopup();
+            loadSalesmen();
+        }
+
+        function closeCommentPopup() {
             ELEMENTS.commentPopup.style.display = 'none';
             ELEMENTS.commentOverlay.style.display = 'none';
-            updatePagination();
         }
 
         async function undoLastAction() {
             if (!lastDeletedRows.length) return;
-            const { data: salesmanData } = lastDeletedRows[0];
-            delete salesmanData.id;
+            const salesmanData = lastDeletedRows[0];
             const { error } = await supabase.from('salesmen').insert(salesmanData);
             if (error) return alert("Failed to undo delete: " + error.message);
             logAction("Undo Remove", `${salesmanData.name} (Device Serial: ${salesmanData.device_serial}, Printer Serial: ${salesmanData.printer_serial})`);
@@ -688,14 +716,7 @@
         }
 
         function showAuditLog() {
-            ELEMENTS.auditLogList.innerHTML = auditLog.map(entry => `
-                <li class="audit-entry">
-                    <span class="audit-timestamp">${entry.timestamp}</span>
-                    <span class="audit-user">[${entry.user}]</span>
-                    <span class="audit-action ${entry.action.toLowerCase().split(' ')[0]}">${entry.action}</span>
-                    <span class="audit-details">${entry.details}</span>
-                </li>
-            `).join('');
+            updateAuditLogDisplay();
             ELEMENTS.auditPopup.style.display = 'block';
             ELEMENTS.auditOverlay.style.display = 'block';
         }
@@ -746,14 +767,10 @@
             if (fetchError) return alert("Failed to fetch salesmen data: " + fetchError.message);
             const { error } = await supabase.from('salesmen').delete().in('id', ids);
             if (error) return alert("Failed to delete salesmen: " + error.message);
-            lastDeletedRows = deletedData.map((data, i) => ({ data, index: selectedRows[i].rowIndex }));
-            selectedRows.forEach(row => {
-                logAction("Bulk Delete Salesman", `${row.cells[0].textContent} (Device Serial: ${row.cells[5].textContent}, Printer Serial: ${row.cells[7].textContent})`);
-                row.remove();
-            });
+            lastDeletedRows = deletedData;
+            selectedRows.forEach(row => logAction("Bulk Delete Salesman", `${row.cells[0].textContent} (Device Serial: ${row.cells[5].textContent}, Printer Serial: ${row.cells[7].textContent})`));
             ELEMENTS.undoButton.disabled = false;
-            filterTable();
-            updatePagination();
+            loadSalesmen();
         }
 
         async function loadSalesmen() {
@@ -798,12 +815,7 @@
             if (row && !e.target.classList.contains('device-serial') && !e.target.classList.contains('printer-serial')) showActionModal(row);
         });
 
-        ELEMENTS.commentPopup.querySelector('#saveCommentBtn').onclick = saveComment;
-        ELEMENTS.commentPopup.querySelector('#closePopupBtn').onclick = () => {
-            ELEMENTS.commentPopup.style.display = 'none';
-            ELEMENTS.commentOverlay.style.display = 'none';
-        };
-        ELEMENTS.commentOverlay.onclick = ELEMENTS.commentPopup.querySelector('#closePopupBtn').onclick;
+        ELEMENTS.commentOverlay.onclick = closeCommentPopup;
     </script>
 </body>
 </html>
