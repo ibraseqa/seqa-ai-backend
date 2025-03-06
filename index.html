@@ -184,11 +184,11 @@
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             transform: translateX(-100%);
             border-radius: 0 16px 16px 0;
-            display: none; /* Hidden by default */
+            display: none;
             flex-direction: column;
         }
         .assistant-container.active {
-            display: flex; /* Only show when active */
+            display: flex;
             transform: translateX(0);
         }
         .assistant-header {
@@ -744,7 +744,7 @@
                     <span>Username</span>
                 </label>
                 <label for="loginPassword" class="password-wrapper">
-                    <input type="text" id="loginPassword" placeholder=" " required>
+                    <input type="password" id="loginPassword" placeholder=" " required>
                     <span>Password</span>
                     <button type="button" class="show-password" onclick="togglePassword()">Show</button>
                 </label>

@@ -8,6 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.18/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=construction" />
     <style>
         :root {
             --primary: #1e3a5f;
@@ -30,335 +31,65 @@
             --menu-bg: #ffffff;
             --menu-hover: #e6f0fa;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { 
-            height: 100%; 
-            width: 100%; 
-            overflow: hidden; 
-        }
-        body {
-            font-family: 'Roboto', sans-serif;
-            background: var(--background);
-            color: var(--text);
-            line-height: 1.4;
-            font-size: 14px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        header {
-            background: var(--primary);
-            color: #fff;
-            padding: 0.75rem 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: var(--shadow);
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
+        html, body { height: 100%; width: 100%; overflow: hidden; }
+        body { font-family: 'Roboto', sans-serif; background: var(--background); color: var(--text); line-height: 1.4; font-size: 14px; display: flex; flex-direction: column; }
+        header { background: var(--primary); color: #fff; padding: 0.75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); position: sticky; top: 0; z-index: 10; }
         header img { height: 35px; transition: transform 0.3s ease; }
         header img:hover { transform: scale(1.05); }
         header h1 { font-size: 1.2rem; margin-left: 0.75rem; font-weight: 500; }
-        .hamburger { 
-            font-size: 1.5rem; 
-            background: none; 
-            border: none; 
-            color: #fff; 
-            cursor: pointer; 
-            padding: 0.5rem; 
-            transition: var(--transition); 
-        }
+        .hamburger { font-size: 1.5rem; background: none; border: none; color: #fff; cursor: pointer; padding: 0.5rem; transition: var(--transition); }
         .hamburger:hover { transform: scale(1.1); }
-        .home-button {
-            background: none;
-            border: none;
-            color: #fff;
-            cursor: pointer;
-            padding: 0.5rem;
-            transition: var(--transition);
-        }
-        .home-button:hover { transform: scale(1.1); }
-        .home-button svg {
-            width: 24px;
-            height: 24px;
-            fill: #fff;
-        }
-
-        .header-buttons {
-            display: none;
-            position: absolute;
-            top: 100%;
-            right: 1rem;
-            background: var(--menu-bg);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            border-radius: 8px;
-            flex-direction: column;
-            padding: 0.5rem;
-            z-index: 11;
-            border: 1px solid var(--border-color);
-        }
+        .home-button, .repair-button { background: none; border: none; color: #fff; cursor: pointer; padding: 0.5rem; transition: var(--transition); }
+        .home-button:hover, .repair-button:hover { transform: scale(1.1); }
+        .home-button svg { width: 24px; height: 24px; fill: #fff; }
+        .header-buttons { display: none; position: absolute; top: 100%; right: 1rem; background: var(--menu-bg); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); border-radius: 8px; flex-direction: column; padding: 0.5rem; z-index: 11; border: 1px solid var(--border-color); opacity: 1; }
         .header-buttons.active { display: flex; }
-        .toggle-button {
-            background: var(--menu-bg);
-            color: var(--text);
-            padding: 0.6rem 1.2rem;
-            border: none;
-            border-radius: 6px;
-            font-weight: 500;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: var(--transition);
-            width: 100%;
-            text-align: left;
-            letter-spacing: 0.5px;
-        }
-        .toggle-button:hover {
-            background: var(--menu-hover);
-            color: var(--primary);
-            transform: translateX(2px);
-        }
-
-        main { 
-            flex: 1; 
-            padding: 0.75rem; 
-            overflow-y: auto; 
-            display: flex; 
-            flex-direction: column; 
-        }
-        .container {
-            background: #fff;
-            padding: 1.5rem;
-            border-radius: 10px;
-            box-shadow: var(--shadow);
-            transition: var(--transition);
-            flex: 1;
-            border: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        h3 {
-            color: var(--primary);
-            font-size: 1.4rem;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid var(--primary);
-            padding-bottom: 0.3rem;
-        }
-
-        .form-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
-            border: 1px solid var(--border-color);
-            padding: 0.75rem;
-            border-radius: 6px;
-        }
+        .toggle-button { background: var(--menu-bg); color: var(--text); padding: 0.6rem 1.2rem; border: none; border-radius: 6px; font-weight: 500; font-size: 0.9rem; cursor: pointer; transition: var(--transition); width: 100%; text-align: left; letter-spacing: 0.5px; }
+        .toggle-button:hover { background: var(--menu-hover); color: var(--primary); transform: translateX(2px); }
+        .toggle-button:disabled { opacity: 0.5; cursor: not-allowed; }
+        main { flex: 1; padding: 0.75rem; overflow-y: auto; display: flex; flex-direction: column; }
+        .container { background: #fff; padding: 1.5rem; border-radius: 10px; box-shadow: var(--shadow); transition: var(--transition); flex: 1; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; }
+        h3 { color: var(--primary); font-size: 1.4rem; margin-bottom: 1rem; border-bottom: 1px solid var(--primary); padding-bottom: 0.3rem; }
+        .form-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; margin-bottom: 1.5rem; border: 1px solid var(--border-color); padding: 0.75rem; border-radius: 6px; }
         .form-container label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.8rem; font-weight: 600; }
-        input[type="text"], select, input[type="file"] {
-            padding: 0.5rem;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-size: 0.9rem;
-            width: 100%;
-            transition: var(--transition);
-        }
-        input[type="text"]:focus, select:focus { 
-            border-color: var(--primary); 
-            box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.2); 
-            outline: none; 
-        }
+        input[type="text"], select, input[type="file"] { padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem; width: 100%; transition: var(--transition); }
+        input[type="text"]:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.2); outline: none; }
         .checkbox-container { display: flex; gap: 1rem; margin: 0.75rem 0; }
         .checkbox-container label { display: flex; align-items: center; gap: 0.3rem; font-size: 0.8rem; }
-
-        button {
-            background: var(--primary);
-            color: #fff;
-            padding: 0.2rem 0.5rem;
-            border: 1px solid var(--primary);
-            border-radius: 4px;
-            font-weight: 600;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: var(--transition);
-        }
+        button { background: var(--primary); color: #fff; padding: 0.2rem 0.5rem; border: 1px solid var(--primary); border-radius: 4px; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: var(--transition); }
         button:hover { background: var(--secondary); border-color: var(--secondary); transform: translateY(-1px); }
-
-        .filter-container {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 0.75rem;
-            flex-wrap: wrap;
-            border: 1px solid var(--border-color);
-            padding: 0.5rem;
-            border-radius: 6px;
-            position: sticky;
-            top: 0;
-            background: var(--background);
-            z-index: 5;
-        }
-        .filter-container input, .filter-container select {
-            padding: 0.4rem;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-size: 0.8rem;
-            width: 130px;
-        }
-        .filter-container input:focus, .filter-container select:focus { 
-            border-color: var(--primary); 
-            box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.2); 
-        }
-
-        .table-wrapper {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-            position: relative;
-        }
-        .table-container {
-            flex: 1;
-            margin-top: 0.75rem;
-            border: 1px solid var(--border-color);
-            border-radius: 10px 10px 0 0;
-            overflow-y: auto;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #fff;
-            transition: var(--transition);
-        }
-        th, td {
-            padding: 0.7rem;
-            text-align: center;
-            border: 1px solid var(--border-color);
-            font-size: 0.8rem;
-            white-space: nowrap;
-        }
-        th { 
-            background: var(--secondary); 
-            color: #fff; 
-            text-transform: uppercase; 
-            position: sticky; 
-            top: 0; 
-            z-index: 6; 
-        }
+        .filter-container { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap; border: 1px solid var(--border-color); padding: 0.5rem; border-radius: 6px; position: sticky; top: 0; background: var(--background); z-index: 5; }
+        .filter-container input, .filter-container select { padding: 0.4rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.8rem; width: 130px; }
+        .filter-container input:focus, .filter-container select:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.2); }
+        .table-wrapper { flex: 1; display: flex; flex-direction: column; min-height: 0; position: relative; }
+        .table-container { flex: 1; margin-top: 0.75rem; border: 1px solid var(--border-color); border-radius: 10px 10px 0 0; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; background: #fff; transition: var(--transition); }
+        th, td { padding: 0.7rem; text-align: center; border: 1px solid var(--border-color); font-size: 0.8rem; white-space: nowrap; }
+        th { background: var(--secondary); color: #fff; text-transform: uppercase; position: sticky; top: 0; z-index: 6; }
         th:hover { background: var(--primary); }
         tr:hover { background: var(--hover-bg); cursor: pointer; }
         tr.selected { background: var(--selected-bg); }
         .status-checkbox { cursor: pointer; }
-        .device-serial, .printer-serial {
-            color: var(--primary);
-            cursor: pointer;
-            text-decoration: underline;
-            transition: color 0.3s ease;
-        }
-        .device-serial:hover, .printer-serial:hover {
-            color: var(--secondary);
-        }
-
-        .pagination-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.5rem;
-            background: var(--background);
-            border: 1px solid var(--border-color);
-            border-top: none;
-            border-radius: 0 0 10px 10px;
-            z-index: 5;
-        }
-        .pagination-buttons button {
-            padding: 0.3rem 0.6rem;
-            margin: 0 0.2rem;
-            font-size: 0.8rem;
-        }
+        .device-serial, .printer-serial { color: var(--primary); cursor: pointer; text-decoration: underline; transition: color 0.3s ease; }
+        .device-serial:hover, .printer-serial:hover { color: var(--secondary); }
+        .pagination-container { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: var(--background); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 10px 10px; z-index: 5; }
+        .pagination-buttons button { padding: 0.3rem 0.6rem; margin: 0 0.2rem; font-size: 0.8rem; }
         .pagination-buttons button:disabled { opacity: 0.5; cursor: not-allowed; }
         .pagination-info { font-size: 0.8rem; }
         .rows-per-page select { padding: 0.3rem; font-size: 0.8rem; border-radius: 4px; }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-        }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); justify-content: center; align-items: center; z-index: 100; }
         .modal.active { display: flex; }
-        .modal-content {
-            background: #fff;
-            padding: 1.5rem;
-            border-radius: 10px;
-            width: 90%;
-            max-width: 350px;
-            text-align: center;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-color);
-        }
-        .modal-button {
-            margin: 0.3rem;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            transition: var(--transition);
-            border: 1px solid transparent;
-        }
-        .confirm-button { background: #38a169; border-color: #38a169; }
+        .modal-content { background: #fff; padding: 1.5rem; border-radius: 10px; width: 90%; max-width: 350px; text-align: center; box-shadow: var(--shadow); border: 1px solid var(--border-color); }
+        .modal-button { margin: 0.3rem; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; transition: var(--transition); border: 1px solid transparent; }
+        .confirm-button { background: #38a169; border-color: #38a169; color: #fff; }
         .confirm-button:hover { background: #2f855a; border-color: #2f855a; }
-        .cancel-button { background: #e53e3e; border-color: #e53e3e; }
+        .cancel-button { background: #e53e3e; border-color: #e53e3e; color: #fff; }
         .cancel-button:hover { background: #c53030; border-color: #c53030; }
-        #repairModal select, #actionModal select {
-            width: 100%;
-            padding: 0.5rem;
-            margin: 0.5rem 0;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-        }
-
-        #commentPopup, #statsPopup, #reportPopup, #auditPopup {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #fff;
-            padding: 1.5rem;
-            border-radius: 10px;
-            box-shadow: var(--shadow);
-            z-index: 1001;
-            width: 90%;
-            max-width: 500px;
-            border: 1px solid var(--border-color);
-        }
-        #commentOverlay, #statsOverlay, #reportOverlay, #auditOverlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 1000;
-        }
-        textarea {
-            width: 100%;
-            padding: 0.5rem;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            resize: vertical;
-            font-size: 0.9rem;
-        }
+        #repairModal select, #actionModal select { width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid var(--border-color); border-radius: 4px; }
+        #commentPopup, #statsPopup, #reportPopup, #auditPopup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 1.5rem; border-radius: 10px; box-shadow: var(--shadow); z-index: 1001; width: 90%; max-width: 500px; border: 1px solid var(--border-color); }
+        #commentOverlay, #statsOverlay, #reportOverlay, #auditOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1000; }
+        textarea { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-size: 0.9rem; }
         textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.2); outline: none; }
         #statsPopup ul, #reportPopup ul, #auditPopup ul { list-style: none; padding: 0; margin: 0.75rem 0; max-height: 300px; overflow-y: auto; }
         #statsPopup li, #reportPopup li, #auditPopup li { padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; }
@@ -382,9 +113,10 @@
         </div>
         <div style="display: flex; align-items: center; gap: 10px;">
             <button class="home-button" onclick="window.location.href='index.html'">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-                </svg>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            </button>
+            <button class="repair-button" onclick="window.location.href='repairdevices.html'">
+                <span class="material-symbols-outlined" style="font-size: 24px; vertical-align: middle;">construction</span>
             </button>
             <button class="hamburger" onclick="toggleMenu()">☰</button>
         </div>
@@ -406,210 +138,53 @@
             <div class="form-container">
                 <label>Name: <input type="text" id="name" oninput="this.value = this.value.replace(/[^a-zA-Z\s]/g, '')" required></label>
                 <label>SalesBuzz Code: <input type="text" id="salesBuzzCode" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required></label>
-                <label>Company: 
-                    <select id="company" required>
-                        <option value="">Select Company</option>
-                        <option value="Zulal">Zulal</option>
-                        <option value="Sehatik">Sehatik</option>
-                        <option value="Alshafiya">Alshafiya</option>
-                        <option value="Rhine">Rhine</option>
-                        <option value="Ramah">Ramah</option>
-                        <option value="ALSAD">ALSAD</option>
-                    </select>
-                </label>
-                <label>Branch: 
-                    <select id="branch" required>
-                        <option value="">Select Branch</option>
-                        <option value="Asir">Asir</option>
-                        <option value="Jeddah">Jeddah</option>
-                        <option value="Almadinah">Almadinah</option>
-                        <option value="Makkah">Makkah</option>
-                        <option value="Riyadh">Riyadh</option>
-                        <option value="Dammam">Dammam</option>
-                        <option value="Jizan">Jizan</option>
-                        <option value="Hail">Hail</option>
-                        <option value="Qassim">Qassim</option>
-                    </select>
-                </label>
-                <label>Device Type: 
-                    <select id="deviceType" required>
-                        <option value="">Select Device Type</option>
-                        <option value="EDA51">EDA 51</option>
-                        <option value="EDA52">EDA 52</option>
-                        <option value="EDA50">EDA 50</option>
-                        <option value="Samsung">Samsung</option>
-                    </select>
-                </label>
+                <label>Company: <select id="company" required><option value="">Select Company</option><option value="Zulal">Zulal</option><option value="Sehatik">Sehatik</option><option value="Alshafiya">Alshafiya</option><option value="Rhine">Rhine</option><option value="Ramah">Ramah</option><option value="ALSAD">ALSAD</option></select></label>
+                <label>Branch: <select id="branch" required><option value="">Select Branch</option><option value="Asir">Asir</option><option value="Jeddah">Jeddah</option><option value="Almadinah">Almadinah</option><option value="Makkah">Makkah</option><option value="Riyadh">Riyadh</option><option value="Dammam">Dammam</option><option value="Jizan">Jizan</option><option value="Hail">Hail</option><option value="Qassim">Qassim</option></select></label>
+                <label>Device Type: <select id="deviceType" required><option value="">Select Device Type</option><option value="EDA51">EDA 51</option><option value="EDA52">EDA 52</option><option value="EDA50">EDA 50</option><option value="Samsung">Samsung</option></select></label>
                 <label>Device Serial: <input type="text" id="deviceSerialNumber" required></label>
-                <label>Printer Type: 
-                    <select id="printerType" required>
-                        <option value="">Select Printer Type</option>
-                        <option value="PR3">PR3</option>
-                        <option value="ZEBRA">ZEBRA</option>
-                    </select>
-                </label>
+                <label>Printer Type: <select id="printerType" required><option value="">Select Printer Type</option><option value="PR3">PR3</option><option value="ZEBRA">ZEBRA</option></select></label>
                 <label>Printer Serial: <input type="text" id="printerSerialNumber" required></label>
-                <div class="checkbox-container">
-                    <label><input type="checkbox" id="verified"> Verified</label>
-                    <label><input type="checkbox" id="soti"> SOTI</label>
-                    <label><input type="checkbox" id="salesBuzz"> SalesBuzz</label>
-                </div>
+                <div class="checkbox-container"><label><input type="checkbox" id="verified"> Verified</label><label><input type="checkbox" id="soti"> SOTI</label><label><input type="checkbox" id="salesBuzz"> SalesBuzz</label></div>
                 <button onclick="addSalesman()">Add Salesman</button>
             </div>
-
             <div class="filter-container">
                 <input type="text" id="searchInput" placeholder="Search by Name..." onkeyup="filterTable()">
-                <select id="companyFilter" onchange="filterTable()">
-                    <option value="">All Companies</option>
-                    <option value="Zulal">Zulal</option>
-                    <option value="Sehatik">Sehatik</option>
-                    <option value="Alshafiya">Alshafiya</option>
-                    <option value="Rhine">Rhine</option>
-                    <option value="Ramah">Ramah</option>
-                    <option value="ALSAD">ALSAD</option>
-                </select>
-                <select id="branchFilter" onchange="filterTable()">
-                    <option value="">All Branches</option>
-                    <option value="Asir">Asir</option>
-                    <option value="Jeddah">Jeddah</option>
-                    <option value="Almadinah">Almadinah</option>
-                    <option value="Makkah">Makkah</option>
-                    <option value="Riyadh">Riyadh</option>
-                    <option value="Dammam">Dammam</option>
-                    <option value="Jizan">Jizan</option>
-                    <option value="Hail">Hail</option>
-                    <option value="Qassim">Qassim</option>
-                </select>
+                <select id="companyFilter" onchange="filterTable()"><option value="">All Companies</option><option value="Zulal">Zulal</option><option value="Sehatik">Sehatik</option><option value="Alshafiya">Alshafiya</option><option value="Rhine">Rhine</option><option value="Ramah">Ramah</option><option value="ALSAD">ALSAD</option></select>
+                <select id="branchFilter" onchange="filterTable()"><option value="">All Branches</option><option value="Asir">Asir</option><option value="Jeddah">Jeddah</option><option value="Almadinah">Almadinah</option><option value="Makkah">Makkah</option><option value="Riyadh">Riyadh</option><option value="Dammam">Dammam</option><option value="Jizan">Jizan</option><option value="Hail">Hail</option><option value="Qassim">Qassim</option></select>
                 <input type="text" id="deviceSerialFilter" placeholder="Device Serial..." onkeyup="filterTable()">
                 <input type="text" id="printerSerialFilter" placeholder="Printer Serial..." onkeyup="filterTable()">
             </div>
-
             <div class="table-wrapper">
                 <div class="table-container">
                     <table id="salesmanTable">
-                        <thead>
-                            <tr>
-                                <th onclick="sortTable(0)">Name</th>
-                                <th onclick="sortTable(1)">SalesBuzz Code</th>
-                                <th onclick="sortTable(2)">Company</th>
-                                <th onclick="sortTable(3)">Branch</th>
-                                <th onclick="sortTable(4)">Device Type</th>
-                                <th onclick="sortTable(5)">Device Serial</th>
-                                <th onclick="sortTable(6)">Printer Type</th>
-                                <th onclick="sortTable(7)">Printer Serial</th>
-                                <th onclick="sortTable(8)">Verified</th>
-                                <th onclick="sortTable(9)">SOTI</th>
-                                <th onclick="sortTable(10)">SalesBuzz</th>
-                                <th onclick="sortTable(11)">Added Date</th>
-                                <th onclick="sortTable(12)">Edited Date</th>
-                                <th onclick="sortTable(13)">Comments</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th onclick="sortTable(0)">Name</th><th onclick="sortTable(1)">SalesBuzz Code</th><th onclick="sortTable(2)">Company</th><th onclick="sortTable(3)">Branch</th><th onclick="sortTable(4)">Device Type</th><th onclick="sortTable(5)">Device Serial</th><th onclick="sortTable(6)">Printer Type</th><th onclick="sortTable(7)">Printer Serial</th><th onclick="sortTable(8)">Verified</th><th onclick="sortTable(9)">SOTI</th><th onclick="sortTable(10)">SalesBuzz</th><th onclick="sortTable(11)">Added Date</th><th onclick="sortTable(12)">Edited Date</th><th onclick="sortTable(13)">Comments</th></tr></thead>
                         <tbody id="salesmanTableBody"></tbody>
                     </table>
                 </div>
                 <div class="pagination-container" id="pagination">
-                    <div class="pagination-buttons">
-                        <button onclick="changePage(-1)">Previous</button>
-                        <span id="pageNumbers"></span>
-                        <button onclick="changePage(1)">Next</button>
-                    </div>
+                    <div class="pagination-buttons"><button onclick="changePage(-1)">Previous</button><span id="pageNumbers"></span><button onclick="changePage(1)">Next</button></div>
                     <div class="pagination-info" id="paginationInfo"></div>
-                    <div class="rows-per-page">
-                        <label>Rows per page: 
-                            <select id="rowsPerPage" onchange="updateRowsPerPage()">
-                                <option value="10">10</option>
-                                <option value="25">25</option>
-                                <option value="50">50</option>
-                            </select>
-                        </label>
-                    </div>
+                    <div class="rows-per-page"><label>Rows per page: <select id="rowsPerPage" onchange="updateRowsPerPage()"><option value="10">10</option><option value="25">25</option><option value="50">50</option></select></label></div>
                 </div>
             </div>
         </section>
     </main>
-
-    <div class="modal" id="confirmationModal">
-        <div class="modal-content">
-            <p id="confirmationMessage">Do you want to save the changes?</p>
-            <button class="modal-button confirm-button" onclick="confirmEdit()">Confirm</button>
-            <button class="modal-button cancel-button" onclick="cancelEdit()">Cancel</button>
-        </div>
-    </div>
-
-    <div class="modal" id="repairModal">
-        <div class="modal-content">
-            <p>Send to Repair</p>
-            <select id="repairReason" required>
-                <option value="">Select Reason</option>
-                <option value="Screen Cracked">Screen Cracked</option>
-                <option value="Battery Failure">Battery Failure</option>
-                <option value="Software Issue">Software Issue</option>
-                <option value="Hardware Failure">Hardware Failure</option>
-                <option value="Other">Other</option>
-            </select>
-            <button class="modal-button confirm-button" onclick="confirmSendToRepair()">Send</button>
-            <button class="modal-button cancel-button" onclick="closeRepairModal()">Cancel</button>
-        </div>
-    </div>
-
-    <div class="modal" id="actionModal">
-        <div class="modal-content">
-            <p>Select Action</p>
-            <select id="actionChoice" required>
-                <option value="">Choose an Action</option>
-                <option value="edit">Edit</option>
-                <option value="remove">Remove</option>
-                <option value="comment">Comment</option>
-            </select>
-            <button class="modal-button confirm-button" onclick="executeAction()">Execute</button>
-            <button class="modal-button cancel-button" onclick="closeActionModal()">Cancel</button>
-        </div>
-    </div>
-
-    <div id="commentOverlay"></div>
-    <div id="commentPopup">
-        <h3>Edit Comment</h3>
-        <textarea id="commentText" rows="5" placeholder="Enter your comment here..."></textarea>
-        <button class="modal-button confirm-button" id="saveCommentBtn">Save Comment</button>
-        <button class="modal-button cancel-button" id="closePopupBtn">Close</button>
-    </div>
-
-    <div id="exportPopup" class="modal">
-        <div class="modal-content">
-            <p>Choose Export Format</p>
-            <button class="modal-button confirm-button" onclick="exportToExcel()">Export to Excel</button>
-            <button class="modal-button confirm-button" onclick="exportToPDF()">Export to PDF</button>
-            <button class="modal-button cancel-button" onclick="closeExportPopup()">Cancel</button>
-        </div>
-    </div>
-
-    <div id="statsOverlay"></div>
-    <div id="statsPopup">
-        <h3>Quick Stats</h3>
-        <ul id="statsList"></ul>
-        <button class="modal-button cancel-button" onclick="closeStatsPopup()">Close</button>
-    </div>
-
-    <div id="reportOverlay"></div>
-    <div id="reportPopup">
-        <h3>Generate Report</h3>
-        <p>Download a detailed HTML report of all salesmen.</p>
-        <button class="modal-button confirm-button" onclick="downloadReport()">Download Report</button>
-        <button class="modal-button cancel-button" onclick="closeReportPopup()">Cancel</button>
-    </div>
-
-    <div id="auditOverlay"></div>
-    <div id="auditPopup">
-        <h3>Audit Log</h3>
-        <input type="text" id="auditSearch" placeholder="Search log..." onkeyup="filterAuditLog()">
-        <ul id="auditLogList"></ul>
-        <button class="modal-button confirm-button" onclick="downloadAuditLog()">Download Log</button>
-        <button class="modal-button cancel-button" onclick="closeAuditPopup()">Close</button>
-    </div>
+    <div class="modal" id="confirmationModal"><div class="modal-content"><p id="confirmationMessage">Do you want to save the changes?</p><button class="modal-button confirm-button" onclick="confirmEdit()">Confirm</button><button class="modal-button cancel-button" onclick="cancelEdit()">Cancel</button></div></div>
+    <div class="modal" id="repairModal"><div class="modal-content"><p>Send to Repair</p><select id="repairReason" required><option value="">Select Reason</option><option value="Screen Cracked">Screen Cracked</option><option value="Battery Failure">Battery Failure</option><option value="Software Issue">Software Issue</option><option value="Hardware Failure">Hardware Failure</option><option value="Other">Other</option></select><button class="modal-button confirm-button" onclick="confirmSendToRepair()">Send</button><button class="modal-button cancel-button" onclick="closeRepairModal()">Cancel</button></div></div>
+    <div class="modal" id="actionModal"><div class="modal-content"><p>Select Action</p><select id="actionChoice" required><option value="">Choose an Action</option><option value="edit">Edit</option><option value="remove">Remove</option><option value="comment">Comment</option></select><button class="modal-button confirm-button" onclick="executeAction()">Execute</button><button class="modal-button cancel-button" onclick="closeActionModal()">Cancel</button></div></div>
+    <div id="commentOverlay"></div><div id="commentPopup"><h3>Edit Comment</h3><textarea id="commentText" rows="5" placeholder="Enter your comment here..."></textarea><button class="modal-button confirm-button" id="saveCommentBtn">Save Comment</button><button class="modal-button cancel-button" id="closePopupBtn">Close</button></div>
+    <div id="exportPopup" class="modal"><div class="modal-content"><p>Choose Export Format</p><button class="modal-button confirm-button" onclick="exportToExcel()">Export to Excel</button><button class="modal-button confirm-button" onclick="exportToPDF()">Export to PDF</button><button class="modal-button cancel-button" onclick="closeExportPopup()">Cancel</button></div></div>
+    <div id="statsOverlay"></div><div id="statsPopup"><h3>Quick Stats</h3><ul id="statsList"></ul><button class="modal-button cancel-button" onclick="closeStatsPopup()">Close</button></div>
+    <div id="reportOverlay"></div><div id="reportPopup"><h3>Generate Report</h3><p>Download a detailed HTML report of all salesmen.</p><button class="modal-button confirm-button" onclick="downloadReport()">Download Report</button><button class="modal-button cancel-button" onclick="closeReportPopup()">Cancel</button></div>
+    <div id="auditOverlay"></div><div id="auditPopup"><h3>Audit Log</h3><input type="text" id="auditSearch" placeholder="Search log..." onkeyup="filterAuditLog()"><ul id="auditLogList"></ul><button class="modal-button confirm-button" onclick="downloadAuditLog()">Download Log</button><button class="modal-button cancel-button" onclick="closeAuditPopup()">Close</button></div>
 
     <script>
         const supabase = window.supabase.createClient('https://beyzsnvccmkztgmltaqs.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJleXpzbnZjY21renRnbWx0YXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA0NzQ5MzYsImV4cCI6MjA1NjA1MDkzNn0.SmiXJ68HGuHToOdukpVtae2_HBMqd3rf7E7RIK-JInM');
+        let currentUser = localStorage.getItem('seqaUser') || 'Unknown';
+        let editingRow = null, currentRow = null, lastDeletedRows = [], auditLog = JSON.parse(localStorage.getItem('salesmenAuditLog')) || [], sortColumn = -1, sortDirection = 1;
+        let currentPage = 1, rowsPerPage = 10;
+        const AUDIT_LOG_LIMIT = 100;
+        let repairItemRow = null, repairItemType = null, actionRow = null;
 
         const ELEMENTS = {
             salesmanTableBody: document.getElementById("salesmanTableBody"),
@@ -644,66 +219,38 @@
             actionChoice: document.getElementById("actionChoice")
         };
 
-        let currentUser = null;
-        let editingRow = null, currentRow = null, lastDeletedRows = [], auditLog = [], sortColumn = -1, sortDirection = 1;
-        let currentPage = 1, rowsPerPage = 10;
-        const AUDIT_LOG_LIMIT = 100;
-        let repairItemRow = null;
-        let repairItemType = null; // "device" or "printer"
-        let actionRow = null;
-
         document.addEventListener("DOMContentLoaded", () => {
-            currentUser = localStorage.getItem('seqaUser') || 'Unknown';
-            auditLog = JSON.parse(localStorage.getItem('salesmenAuditLog')) || [];
-            if (localStorage.getItem('seqaSession') !== 'loggedIn') {
-                window.location.href = 'index.html';
-            } else {
-                loadSalesmen();
-            }
-            ELEMENTS.deviceSerialFilter.addEventListener('keyup', filterTable);
-            ELEMENTS.companyFilter.addEventListener('change', filterTable);
-            ELEMENTS.branchFilter.addEventListener('change', filterTable);
-            ELEMENTS.printerSerialFilter.addEventListener('keyup', filterTable);
+            if (localStorage.getItem('seqaSession') !== 'loggedIn') window.location.href = 'index.html';
+            else loadSalesmen();
+            ELEMENTS.rowsPerPage.value = rowsPerPage;
         });
 
-        const toggleMenu = () => ELEMENTS.headerButtons.classList.toggle("active");
+        function toggleMenu() { ELEMENTS.headerButtons.classList.toggle("active"); }
 
-        const logAction = (action, details, row = null) => {
+        function logAction(action, details, row = null) {
             const timestamp = new Date().toLocaleString();
-            const user = currentUser;
-            let entryDetails = details;
-            if (action === "Edit Salesman" && row) {
-                const oldRow = editingRow.cloneNode(true);
-                const changes = [];
-                for (let i = 0; i < row.cells.length - 1; i++) {
-                    if (i === 8 || i === 9 || i === 10) continue;
-                    const oldVal = oldRow.cells[i].textContent;
-                    const newVal = row.cells[i].textContent;
-                    if (oldVal !== newVal) changes.push(`${['Name', 'SalesBuzz Code', 'Company', 'Branch', 'Device Type', 'Device Serial', 'Printer Type', 'Printer Serial', 'Verified', 'SOTI', 'SalesBuzz', 'Added Date', 'Edited Date', 'Comments'][i]}: "${oldVal}" -> "${newVal}"`);
-                }
-                if (changes.length) entryDetails = `${details} - Changes: ${changes.join(", ")}`;
-            }
-            auditLog.push({ timestamp, user, action, details: entryDetails });
+            const entryDetails = action === "Edit Salesman" && row ? `${details} - Changes: ${Array.from(row.cells).slice(0, -1).map((c, i) => i !== 8 && i !== 9 && i !== 10 && c.textContent !== editingRow.cells[i].textContent ? `${['Name', 'SalesBuzz Code', 'Company', 'Branch', 'Device Type', 'Device Serial', 'Printer Type', 'Printer Serial', 'Verified', 'SOTI', 'SalesBuzz', 'Added Date', 'Edited Date', 'Comments'][i]}: "${editingRow.cells[i].textContent}" -> "${c.textContent}"` : '').filter(Boolean).join(", ")}` : details;
+            auditLog.push({ timestamp, user: currentUser, action, details: entryDetails });
             if (auditLog.length > AUDIT_LOG_LIMIT) auditLog = auditLog.slice(-AUDIT_LOG_LIMIT);
             localStorage.setItem('salesmenAuditLog', JSON.stringify(auditLog));
-        };
+        }
 
-        const checkDuplicates = async (deviceSerial, printerSerial, salesbuzzCode, company, excludeId = null) => {
-            const deviceQuery = supabase.from('salesmen').select('id, device_serial, printer_serial, salesbuzz_code, company');
-            if (excludeId) deviceQuery.neq('id', excludeId);
-            const { data, error } = await deviceQuery;
+        async function checkDuplicates(deviceSerial, printerSerial, salesbuzzCode, company, excludeId = null) {
+            const { data, error } = await supabase.from('salesmen')
+                .select('id, device_serial, printer_serial, salesbuzz_code, company')
+                .neq('id', excludeId || '');
             if (error) {
                 console.error('Error checking duplicates:', error.message);
                 return false;
             }
             return data.some(s => 
-                (s.device_serial.trim() === deviceSerial.trim() && s.device_serial !== "Sent to Repair") || 
-                (s.printer_serial.trim() === printerSerial.trim() && s.printer_serial !== "Sent to Repair") || 
+                (s.device_serial.trim().toLowerCase() === deviceSerial.trim().toLowerCase() && s.device_serial !== "Sent to Repair") || 
+                (s.printer_serial.trim().toLowerCase() === printerSerial.trim().toLowerCase() && s.printer_serial !== "Sent to Repair") || 
                 (s.salesbuzz_code.trim() === salesbuzzCode.trim() && s.company === company)
             );
-        };
+        }
 
-        const addSalesman = async () => {
+        async function addSalesman() {
             const inputs = {
                 name: document.getElementById("name").value.trim(),
                 salesbuzz_code: document.getElementById("salesBuzzCode").value.trim(),
@@ -720,25 +267,16 @@
                 edited_date: null,
                 comments: null
             };
-
             if (Object.values(inputs).slice(0, 8).some(val => !val)) return alert("Please fill in all required fields.");
-            if (await checkDuplicates(inputs.device_serial, inputs.printer_serial, inputs.salesbuzz_code, inputs.company)) {
-                return alert("A salesman with this Device Serial, Printer Serial, or SalesBuzz Code and Company combination already exists.");
-            }
-
+            if (await checkDuplicates(inputs.device_serial, inputs.printer_serial, inputs.salesbuzz_code, inputs.company)) return alert("A salesman with this Device Serial, Printer Serial, or SalesBuzz Code and Company combination already exists.");
             const { error } = await supabase.from('salesmen').insert(inputs);
-            if (error) {
-                console.error('Error adding salesman:', error.message);
-                return alert("Failed to add salesman: " + error.message);
-            }
-
+            if (error) return alert("Failed to add salesman: " + error.message);
             logAction("Add Salesman", `${inputs.name} (Device Serial: ${inputs.device_serial}, Printer Serial: ${inputs.printer_serial})`);
-            document.querySelectorAll('.form-container input, .form-container select').forEach(el => el.value = "");
-            document.querySelectorAll('.checkbox-container input').forEach(el => el.checked = false);
+            document.querySelectorAll('.form-container input, .form-container select').forEach(el => el.value = el.type === "checkbox" ? (el.checked = false) : "");
             loadSalesmen();
-        };
+        }
 
-        const importCSV = async (file) => {
+        async function importCSV(file) {
             if (!file) return;
             const reader = new FileReader();
             reader.onload = async e => {
@@ -746,7 +284,6 @@
                 const headers = rows[0].map(h => h.trim().toLowerCase());
                 const expected = ["name", "salesbuzz code", "company", "branch", "device type", "device serial", "printer type", "printer serial", "verified", "soti", "salesbuzz"];
                 if (!expected.every((h, i) => headers[i] === h)) return alert("CSV format incorrect. Expected: " + expected.join(", "));
-
                 const salesmenToInsert = [];
                 let hasDuplicates = false;
                 for (const data of rows.slice(1)) {
@@ -773,87 +310,60 @@
                     }
                     salesmenToInsert.push(cleanedData);
                 }
-
                 const { error } = await supabase.from('salesmen').insert(salesmenToInsert);
-                if (error) {
-                    console.error('Error importing salesmen:', error.message);
-                    return alert("Failed to import some salesmen: " + error.message);
-                }
-
+                if (error) return alert("Failed to import some salesmen: " + error.message);
                 salesmenToInsert.forEach(s => logAction("Import Salesman", `${s.name} (Device Serial: ${s.device_serial}, Printer Serial: ${s.printer_serial})`));
-                if (hasDuplicates) alert("Some entries were skipped due to duplicate Device Serial, Printer Serial, or SalesBuzz Code and Company combinations.");
+                if (hasDuplicates) alert("Some entries were skipped due to duplicates.");
                 ELEMENTS.importFile.value = "";
                 loadSalesmen();
             };
             reader.readAsText(file);
-        };
+        }
 
-        const toggleStatus = async (checkbox, cellIndex) => {
+        async function toggleStatus(checkbox, cellIndex) {
             const row = checkbox.closest('tr');
             const id = row.dataset.id;
             const field = ['verified', 'soti', 'salesbuzz'][cellIndex - 8];
             const newValue = checkbox.checked;
-
-            const { error } = await supabase
-                .from('salesmen')
-                .update({ [field]: newValue, edited_date: new Date().toLocaleDateString() })
-                .eq('id', id);
-            if (error) {
-                console.error('Error toggling status:', error.message);
-                return alert("Failed to update status: " + error.message);
-            }
-
+            const { error } = await supabase.from('salesmen').update({ [field]: newValue, edited_date: new Date().toLocaleDateString() }).eq('id', id);
+            if (error) return alert("Failed to update status: " + error.message);
             row.cells[cellIndex].innerHTML = `<input type="checkbox" class="status-checkbox" ${newValue ? "checked" : ""} onchange="toggleStatus(this, ${cellIndex})">`;
             row.cells[12].textContent = new Date().toLocaleDateString();
             logAction("Toggle Status", `${row.cells[0].textContent} - ${field} to ${newValue ? "Yes" : "No"}`);
             updatePagination();
-        };
+        }
 
-        const removeRow = async row => {
-            const id = row.dataset.id;
+        async function removeRow(row) {
             if (!confirm(`Are you sure you want to delete ${row.cells[0].textContent}?`)) return;
-
-            // Fetch the row data before deletion for undo
+            const id = row.dataset.id;
             const { data: salesmanData, error: fetchError } = await supabase.from('salesmen').select('*').eq('id', id).single();
-            if (fetchError) {
-                console.error('Error fetching salesman for undo:', fetchError.message);
-                return alert("Failed to fetch salesman data: " + fetchError.message);
-            }
-
+            if (fetchError) return alert("Failed to fetch salesman data: " + fetchError.message);
             const { error } = await supabase.from('salesmen').delete().eq('id', id);
-            if (error) {
-                console.error('Error deleting salesman:', error.message);
-                return alert("Failed to delete salesman: " + error.message);
-            }
-
+            if (error) return alert("Failed to delete salesman: " + error.message);
             lastDeletedRows = [{ data: salesmanData, index: row.rowIndex }];
             logAction("Remove Salesman", `${row.cells[0].textContent} (Device Serial: ${row.cells[5].textContent}, Printer Serial: ${row.cells[7].textContent})`);
             row.remove();
             ELEMENTS.undoButton.disabled = false;
             filterTable();
             updatePagination();
-        };
+        }
 
-        const editSalesman = row => {
-            if (!row || editingRow) return; // Prevent multiple edits
+        function editSalesman(row) {
+            if (!row || editingRow) return;
             editingRow = row;
-            for (let i = 0; i < row.cells.length - 1; i++) { // Exclude Comments column for now
-                if (i === 8 || i === 9 || i === 10 || i === 5 || i === 7) continue; // Skip checkboxes, device_serial, printer_serial
-                const currentValue = row.cells[i].textContent;
-                row.cells[i].innerHTML = `<input type="text" value="${currentValue}" style="width: 100%; padding: 0.2rem;">`;
+            for (let i = 0; i < row.cells.length - 1; i++) {
+                if (i === 8 || i === 9 || i === 10 || i === 5 || i === 7) continue;
+                row.cells[i].innerHTML = `<input type="text" value="${row.cells[i].textContent}" style="width: 100%; padding: 0.2rem;">`;
             }
-            // Replace Comments with Save button
             row.cells[13].innerHTML = `<button class="modal-button confirm-button" onclick="showSaveModal()">Save</button>`;
-        };
+        }
 
-        const showSaveModal = () => {
+        function showSaveModal() {
             ELEMENTS.confirmationMessage.textContent = "Do you want to save the changes?";
             ELEMENTS.confirmationModal.style.display = "flex";
-        };
+        }
 
-        const closeModal = () => ELEMENTS.confirmationModal.style.display = "none";
-
-        const confirmEdit = async () => {
+        async function confirmEdit() {
             if (!editingRow) return;
             const id = editingRow.dataset.id;
             const updatedData = {
@@ -865,242 +375,151 @@
                 printer_type: editingRow.cells[6].querySelector('input')?.value.trim() || editingRow.cells[6].textContent,
                 edited_date: new Date().toLocaleDateString()
             };
-
-            if (await checkDuplicates(editingRow.cells[5].textContent, editingRow.cells[7].textContent, updatedData.salesbuzz_code, updatedData.company, id)) {
-                alert("This SalesBuzz Code and Company combination is already in use.");
-                return;
-            }
-
+            if (await checkDuplicates(editingRow.cells[5].textContent, editingRow.cells[7].textContent, updatedData.salesbuzz_code, updatedData.company, id)) return alert("This Device Serial, Printer Serial, or SalesBuzz Code and Company combination is already in use.");
             const { error } = await supabase.from('salesmen').update(updatedData).eq('id', id);
-            if (error) {
-                console.error('Error editing salesman:', error.message);
-                alert("Failed to edit salesman: " + error.message);
-                return;
-            }
-
+            if (error) return alert("Failed to edit salesman: " + error.message);
             logAction("Edit Salesman", `${updatedData.name} (Device Serial: ${editingRow.cells[5].textContent}, Printer Serial: ${editingRow.cells[7].textContent})`, editingRow);
-            closeModal();
+            ELEMENTS.confirmationModal.style.display = "none";
             editingRow = null;
-            loadSalesmen(); // Refresh table to restore original state
-        };
+            loadSalesmen();
+        }
 
-        const cancelEdit = () => { 
+        function cancelEdit() {
             if (editingRow) {
-                loadSalesmen(); // Reload to revert changes
+                loadSalesmen();
                 editingRow = null;
             }
-            closeModal();
-        };
+            ELEMENTS.confirmationModal.style.display = "none";
+        }
 
-        const showRepairModal = (row, type) => {
+        function showRepairModal(row, type) {
             repairItemRow = row;
-            repairItemType = type; // "device" or "printer"
+            repairItemType = type;
             ELEMENTS.repairModal.style.display = "flex";
             ELEMENTS.repairReason.value = "";
-        };
+        }
 
-        const closeRepairModal = () => {
+        function closeRepairModal() {
             ELEMENTS.repairModal.style.display = "none";
             repairItemRow = null;
             repairItemType = null;
-        };
+        }
 
-        const confirmSendToRepair = async () => {
+        async function confirmSendToRepair() {
             if (!repairItemRow || !repairItemType) return;
             const reason = ELEMENTS.repairReason.value;
-            if (!reason) {
-                alert("Please select a repair reason.");
-                return;
-            }
+            if (!reason) return alert("Please select a repair reason.");
             const id = repairItemRow.dataset.id;
             const serial = repairItemType === "device" ? repairItemRow.cells[5].textContent : repairItemRow.cells[7].textContent;
             const type = repairItemType === "device" ? repairItemRow.cells[4].textContent : repairItemRow.cells[6].textContent;
-            const company = repairItemRow.cells[2].textContent;
-            const branch = repairItemRow.cells[3].textContent;
-            const name = repairItemRow.cells[0].textContent;
-
             const repairData = {
                 salesman_id: id,
                 device_type: repairItemType === "device" ? type : null,
                 serial_number: serial,
                 printer_type: repairItemType === "printer" ? type : null,
-                branch,
-                company,
-                delivered_by: name,
+                branch: repairItemRow.cells[3].textContent,
+                company: repairItemRow.cells[2].textContent,
+                delivered_by: repairItemRow.cells[0].textContent,
                 issue: reason,
                 status: "Pending",
                 received_date: new Date().toLocaleDateString(),
                 repair_date: null
             };
-
             const { error: insertError } = await supabase.from('repair_devices').insert(repairData);
-            if (insertError) {
-                console.error('Error sending to repair:', insertError.message);
-                alert("Failed to send to repair: " + insertError.message);
-                return;
-            }
-
+            if (insertError) return alert("Failed to send to repair: " + insertError.message);
             const updateField = repairItemType === "device" ? "device_serial" : "printer_serial";
-            const { error: updateError } = await supabase
-                .from('salesmen')
-                .update({ [updateField]: "Sent to Repair", edited_date: new Date().toLocaleDateString() })
-                .eq('id', id);
-            if (updateError) {
-                console.error('Error updating salesman:', updateError.message);
-                alert("Failed to update salesman: " + updateError.message);
-                return;
-            }
-
-            logAction(`Send ${repairItemType === "device" ? "Device" : "Printer"} to Repair`, `${name} - ${repairItemType === "device" ? "Device" : "Printer"} Serial: ${serial} (Reason: ${reason})`);
+            const { error: updateError } = await supabase.from('salesmen').update({ [updateField]: "Sent to Repair", edited_date: new Date().toLocaleDateString() }).eq('id', id);
+            if (updateError) return alert("Failed to update salesman: " + updateError.message);
+            logAction(`Send ${repairItemType === "device" ? "Device" : "Printer"} to Repair`, `${repairItemRow.cells[0].textContent} - ${repairItemType === "device" ? "Device" : "Printer"} Serial: ${serial} (Reason: ${reason})`);
             closeRepairModal();
             loadSalesmen();
-        };
+        }
 
-        const showActionModal = row => {
+        function showActionModal(row) {
             actionRow = row;
             ELEMENTS.actionModal.style.display = "flex";
             ELEMENTS.actionChoice.value = "";
-        };
+        }
 
-        const closeActionModal = () => {
+        function closeActionModal() {
             ELEMENTS.actionModal.style.display = "none";
             actionRow = null;
-        };
+        }
 
-        const executeAction = () => {
+        function executeAction() {
             if (!actionRow) return;
             const action = ELEMENTS.actionChoice.value;
-            if (!action) {
-                alert("Please select an action.");
-                return;
-            }
+            if (!action) return alert("Please select an action.");
             switch (action) {
-                case "edit":
-                    editSalesman(actionRow);
-                    break;
-                case "remove":
-                    removeRow(actionRow);
-                    break;
+                case "edit": editSalesman(actionRow); break;
+                case "remove": removeRow(actionRow); break;
                 case "comment":
-                    showCommentPopup(actionRow);
+                    currentRow = actionRow;
+                    ELEMENTS.commentText.value = currentRow.cells[13].textContent || '';
+                    ELEMENTS.commentPopup.style.display = 'block';
+                    ELEMENTS.commentOverlay.style.display = 'block';
                     break;
             }
             closeActionModal();
-        };
+        }
 
-        const undoLastAction = async () => {
+        async function saveComment() {
+            if (!currentRow) return;
+            const id = currentRow.dataset.id;
+            const comment = ELEMENTS.commentText.value.trim();
+            const { error } = await supabase.from('salesmen').update({ comments: comment, edited_date: new Date().toLocaleDateString() }).eq('id', id);
+            if (error) return alert("Failed to update comment: " + error.message);
+            logAction("Update Comment", `${currentRow.cells[0].textContent} - Comment changed from "${currentRow.cells[13].textContent}" to "${comment}"`);
+            currentRow.cells[13].textContent = comment;
+            ELEMENTS.commentPopup.style.display = 'none';
+            ELEMENTS.commentOverlay.style.display = 'none';
+            updatePagination();
+        }
+
+        async function undoLastAction() {
             if (!lastDeletedRows.length) return;
             const { data: salesmanData } = lastDeletedRows[0];
-
-            // Remove the id field to let the database assign a new one
-            const { id, ...insertData } = salesmanData;
-
-            const { error } = await supabase.from('salesmen').insert(insertData);
-            if (error) {
-                console.error('Error undoing delete:', error.message);
-                alert("Failed to undo delete: " + error.message);
-                return;
-            }
-
-            logAction("Undo Remove", `${insertData.name} (Device Serial: ${insertData.device_serial}, Printer Serial: ${insertData.printer_serial})`);
+            delete salesmanData.id;
+            const { error } = await supabase.from('salesmen').insert(salesmanData);
+            if (error) return alert("Failed to undo delete: " + error.message);
+            logAction("Undo Remove", `${salesmanData.name} (Device Serial: ${salesmanData.device_serial}, Printer Serial: ${salesmanData.printer_serial})`);
             lastDeletedRows = [];
             ELEMENTS.undoButton.disabled = true;
             loadSalesmen();
-        };
+        }
 
-        const toggleRowSelection = (row, event) => {
-            if (event.target.classList.contains('status-checkbox') || 
-                event.target.classList.contains('device-serial') || 
-                event.target.classList.contains('printer-serial') || 
-                event.target.tagName === 'INPUT' || 
-                event.target.tagName === 'BUTTON') return;
-            if (event.ctrlKey || event.metaKey) {
-                row.classList.toggle('selected');
-            } else {
+        function toggleRowSelection(row, event) {
+            if (event.target.classList.contains('status-checkbox') || event.target.classList.contains('device-serial') || event.target.classList.contains('printer-serial') || event.target.tagName === 'INPUT' || event.target.tagName === 'BUTTON') return;
+            if (event.ctrlKey || event.metaKey) row.classList.toggle('selected');
+            else {
                 document.querySelectorAll('tr.selected').forEach(r => r.classList.remove('selected'));
                 row.classList.add('selected');
             }
-        };
+        }
 
-        const sortTable = column => {
+        function sortTable(column) {
             const rows = Array.from(ELEMENTS.salesmanTableBody.rows);
             if (sortColumn === column) sortDirection *= -1;
             else sortDirection = 1;
             sortColumn = column;
-
             rows.sort((a, b) => {
                 let aValue = a.cells[column].querySelector('.status-checkbox') ? a.cells[column].querySelector('.status-checkbox').checked : a.cells[column].textContent;
                 let bValue = b.cells[column].querySelector('.status-checkbox') ? b.cells[column].querySelector('.status-checkbox').checked : b.cells[column].textContent;
-
                 if (column === 1 || column === 11 || column === 12) {
                     aValue = column === 1 ? parseInt(aValue) || aValue : new Date(aValue).getTime() || aValue;
                     bValue = column === 1 ? parseInt(bValue) || bValue : new Date(bValue).getTime() || bValue;
                 }
-
                 if (typeof aValue === 'boolean') return sortDirection * (aValue === bValue ? 0 : aValue ? -1 : 1);
                 return sortDirection * (aValue < bValue ? -1 : aValue > bValue ? 1 : 0);
             });
-
             ELEMENTS.salesmanTableBody.innerHTML = '';
             rows.forEach(row => ELEMENTS.salesmanTableBody.appendChild(row));
-            document.querySelectorAll('th').forEach((th, i) => {
-                th.textContent = th.textContent.replace(/[↑↓]/g, '') + (i === column ? (sortDirection === 1 ? ' ↑' : ' ↓') : '');
-            });
+            document.querySelectorAll('th').forEach((th, i) => th.textContent = th.textContent.replace(/[↑↓]/g, '') + (i === column ? (sortDirection === 1 ? ' ↑' : ' ↓') : ''));
             filterTable();
             updatePagination();
-        };
+        }
 
-        const showCommentPopup = row => {
-            currentRow = row;
-            document.getElementById('commentText').value = row.cells[13].textContent || '';
-            ELEMENTS.commentPopup.style.display = 'block';
-            ELEMENTS.commentOverlay.style.display = 'block';
-        };
-
-        document.getElementById('saveCommentBtn').onclick = async () => {
-            const id = currentRow.dataset.id;
-            const newComment = document.getElementById('commentText').value.trim();
-            const { error } = await supabase
-                .from('salesmen')
-                .update({ comments: newComment, edited_date: new Date().toLocaleDateString() })
-                .eq('id', id);
-            if (error) {
-                console.error('Error updating comment:', error.message);
-                return alert("Failed to update comment: " + error.message);
-            }
-            const oldComment = currentRow.cells[13].textContent;
-            currentRow.cells[13].textContent = newComment;
-            logAction("Update Comment", `${currentRow.cells[0].textContent} - Comment changed from "${oldComment}" to "${newComment}"`);
-            ELEMENTS.commentPopup.style.display = 'none';
-            ELEMENTS.commentOverlay.style.display = 'none';
-            updatePagination();
-        };
-        document.getElementById('closePopupBtn').onclick = () => { ELEMENTS.commentPopup.style.display = 'none'; ELEMENTS.commentOverlay.style.display = 'none'; };
-        ELEMENTS.commentOverlay.onclick = () => { ELEMENTS.commentPopup.style.display = 'none'; ELEMENTS.commentOverlay.style.display = 'none'; };
-
-        const showExportPopup = () => ELEMENTS.exportPopup.style.display = "flex";
-        const closeExportPopup = () => ELEMENTS.exportPopup.style.display = "none";
-
-        const exportToExcel = () => {
-            try {
-                const workbook = XLSX.utils.table_to_book(document.getElementById("salesmanTable"), { sheet: "Salesmen" });
-                XLSX.writeFile(workbook, "SalesmenData.xlsx");
-                closeExportPopup();
-            } catch (e) { alert("Excel export failed: " + e.message); }
-        };
-
-        const exportToPDF = () => {
-            try {
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF('l', 'pt', 'a4');
-                pdf.text("Salesmen Data", 40, 40);
-                pdf.autoTable({ html: '#salesmanTable', startY: 60, theme: 'striped', styles: { fontSize: 8, cellPadding: 4 }, margin: { left: 15, right: 15 } });
-                pdf.save('SalesmenData.pdf');
-                closeExportPopup();
-            } catch (e) { alert("PDF export failed: " + e.message); }
-        };
-
-        const filterTable = () => {
+        function filterTable() {
             const filters = {
                 name: ELEMENTS.searchInput.value.toLowerCase(),
                 company: ELEMENTS.companyFilter.value,
@@ -1110,35 +529,27 @@
             };
             Array.from(ELEMENTS.salesmanTableBody.rows).forEach(row => {
                 const [name, , company, branch, , deviceSerial, , printerSerial] = row.cells;
-                const matches = (
+                row.dataset.visible = (
                     name.textContent.toLowerCase().includes(filters.name) &&
                     (!filters.company || company.textContent === filters.company) &&
                     (!filters.branch || branch.textContent === filters.branch) &&
                     deviceSerial.textContent.toLowerCase().includes(filters.deviceSerial) &&
                     printerSerial.textContent.toLowerCase().includes(filters.printerSerial)
-                );
-                row.dataset.visible = matches ? "true" : "false";
+                ) ? "true" : "false";
             });
             currentPage = 1;
             updatePagination();
-        };
+        }
 
-        const updatePagination = () => {
+        function updatePagination() {
             const allRows = Array.from(ELEMENTS.salesmanTableBody.rows);
             const visibleRows = allRows.filter(row => row.dataset.visible === "true");
             const totalRows = visibleRows.length;
             const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
-
             currentPage = Math.min(currentPage, totalPages) || 1;
-
             const start = (currentPage - 1) * rowsPerPage;
             const end = start + rowsPerPage;
-
-            allRows.forEach(row => {
-                const index = allRows.indexOf(row);
-                row.style.display = (row.dataset.visible === "true" && index >= start && index < end) ? "" : "none";
-            });
-
+            allRows.forEach(row => row.style.display = (row.dataset.visible === "true" && allRows.indexOf(row) >= start && allRows.indexOf(row) < end) ? "" : "none");
             ELEMENTS.pageNumbers.innerHTML = '';
             for (let i = 1; i <= totalPages; i++) {
                 const btn = document.createElement('button');
@@ -1147,32 +558,47 @@
                 btn.onclick = () => goToPage(i);
                 ELEMENTS.pageNumbers.appendChild(btn);
             }
-
-            ELEMENTS.paginationInfo.textContent = totalRows > 0 
-                ? `Showing ${Math.min(start + 1, totalRows)} to ${Math.min(end, totalRows)} of ${totalRows} entries`
-                : "No entries to show";
+            ELEMENTS.paginationInfo.textContent = totalRows > 0 ? `Showing ${Math.min(start + 1, totalRows)} to ${Math.min(end, totalRows)} of ${totalRows} entries` : "No entries to show";
             document.querySelector('.pagination-buttons button:first-child').disabled = currentPage === 1;
             document.querySelector('.pagination-buttons button:last-child').disabled = currentPage === totalPages;
-        };
+        }
 
-        const changePage = delta => {
+        function changePage(delta) {
             const totalPages = Math.ceil(Array.from(ELEMENTS.salesmanTableBody.rows).filter(row => row.dataset.visible === "true").length / rowsPerPage);
             currentPage = Math.max(1, Math.min(currentPage + delta, totalPages));
             updatePagination();
-        };
+        }
 
-        const goToPage = page => {
+        function goToPage(page) {
             currentPage = page;
             updatePagination();
-        };
+        }
 
-        const updateRowsPerPage = () => {
+        function updateRowsPerPage() {
             rowsPerPage = parseInt(ELEMENTS.rowsPerPage.value);
             currentPage = 1;
             updatePagination();
-        };
+        }
 
-        const showStatsPopup = () => {
+        function showExportPopup() { ELEMENTS.exportPopup.style.display = "flex"; }
+        function closeExportPopup() { ELEMENTS.exportPopup.style.display = "none"; }
+
+        function exportToExcel() {
+            const workbook = XLSX.utils.table_to_book(document.getElementById("salesmanTable"), { sheet: "Salesmen" });
+            XLSX.writeFile(workbook, "SalesmenData.xlsx");
+            closeExportPopup();
+        }
+
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('l', 'pt', 'a4');
+            pdf.text("Salesmen Data", 40, 40);
+            pdf.autoTable({ html: '#salesmanTable', startY: 60, theme: 'striped', styles: { fontSize: 8, cellPadding: 4 }, margin: { left: 15, right: 15 } });
+            pdf.save('SalesmenData.pdf');
+            closeExportPopup();
+        }
+
+        function showStatsPopup() {
             const rows = Array.from(ELEMENTS.salesmanTableBody.rows).filter(row => row.style.display !== "none");
             const stats = {
                 total: rows.length,
@@ -1182,7 +608,6 @@
                 companies: {}
             };
             rows.forEach(row => stats.companies[row.cells[2].textContent] = (stats.companies[row.cells[2].textContent] || 0) + 1);
-
             ELEMENTS.statsList.innerHTML = `
                 <li>Total Salesmen: ${stats.total}</li>
                 <li>Verified: ${stats.verified} (${stats.total ? (stats.verified / stats.total * 100).toFixed(1) : 0}%)</li>
@@ -1193,51 +618,76 @@
             `;
             ELEMENTS.statsPopup.style.display = 'block';
             ELEMENTS.statsOverlay.style.display = 'block';
-        };
-        const closeStatsPopup = () => { ELEMENTS.statsPopup.style.display = 'none'; ELEMENTS.statsOverlay.style.display = 'none'; };
+        }
+
+        function closeStatsPopup() {
+            ELEMENTS.statsPopup.style.display = 'none';
+            ELEMENTS.statsOverlay.style.display = 'none';
+        }
+
         ELEMENTS.statsOverlay.onclick = closeStatsPopup;
 
-        const generateReport = () => {
+        function generateReport() {
             ELEMENTS.reportPopup.style.display = 'block';
             ELEMENTS.reportOverlay.style.display = 'block';
-        };
-        const closeReportPopup = () => { ELEMENTS.reportPopup.style.display = 'none'; ELEMENTS.reportOverlay.style.display = 'none'; };
+        }
+
+        function closeReportPopup() {
+            ELEMENTS.reportPopup.style.display = 'none';
+            ELEMENTS.reportOverlay.style.display = 'none';
+        }
+
         ELEMENTS.reportOverlay.onclick = closeReportPopup;
 
-        const downloadReport = () => {
+        function downloadReport() {
             const rows = Array.from(ELEMENTS.salesmanTableBody.rows).filter(row => row.style.display !== "none");
             const reportHTML = `
-                <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Seqa Salesmen Report - ${new Date().toLocaleDateString()}</title>
-                <style>
-                    body { font-family: 'Roboto', sans-serif; margin: 0; padding: 20px; background: #f5f7fa; color: #2d3748; }
-                    header { text-align: center; padding: 20px; background: #2c6e9b; color: #fff; border-radius: 10px 10px 0 0; }
-                    header img { width: 100px; } h1 { font-size: 24px; margin: 10px 0; }
-                    .report-container { background: #fff; border: 1px solid #d1d5db; border-radius: 0 0 10px 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
-                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                    th, td { padding: 8px; border: 1px solid #d1d5db; text-align: center; font-size: 14px; }
-                    th { background: #3498db; color: #fff; text-transform: uppercase; }
-                    tr:nth-child(even) { background: #f1f5f9; }
-                    footer { text-align: center; margin-top: 20px; font-size: 12px; color: #718096; }
-                </style></head>
-                <body><header><img src="https://static.wixstatic.com/media/fdd745_d266b548f51c43cd8532994122bf4db6~mv2.png/v1/crop/x_0,y_0,w_1006,h_640/fill/w_121,h_77,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/seqa-lo.png" alt="Seqa Logo">
-                <h1>Seqa Salesmen Report</h1><p>Generated on ${new Date().toLocaleString()}</p></header>
-                <div class="report-container"><table><thead><tr>
-                    <th>Name</th><th>SalesBuzz Code</th><th>Company</th><th>Branch</th><th>Device Type</th><th>Device Serial</th><th>Printer Type</th><th>Printer Serial</th>
-                    <th>Verified</th><th>SOTI</th><th>SalesBuzz</th><th>Added Date</th><th>Edited Date</th><th>Comments</th>
-                </tr></thead><tbody>${rows.map(row => `<tr>${Array.from(row.cells).map(cell => `<td>${cell.querySelector('.status-checkbox') ? (cell.querySelector('.status-checkbox').checked ? 'Yes' : 'No') : cell.textContent}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
-                <footer><p>© ${new Date().getFullYear()} Seqa. All rights reserved.</p></footer></body></html>
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Seqa Salesmen Report - ${new Date().toLocaleDateString()}</title>
+                    <style>
+                        body { font-family: 'Roboto', sans-serif; margin: 0; padding: 20px; background: #f5f7fa; color: #2d3748; }
+                        header { text-align: center; padding: 20px; background: #2c6e9b; color: #fff; border-radius: 10px 10px 0 0; }
+                        header img { width: 100px; }
+                        h1 { font-size: 24px; margin: 10px 0; }
+                        .report-container { background: #fff; border: 1px solid #d1d5db; border-radius: 0 0 10px 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th, td { padding: 8px; border: 1px solid #d1d5db; text-align: center; font-size: 14px; }
+                        th { background: #3498db; color: #fff; text-transform: uppercase; }
+                        tr:nth-child(even) { background: #f1f5f9; }
+                        footer { text-align: center; margin-top: 20px; font-size: 12px; color: #718096; }
+                    </style>
+                </head>
+                <body>
+                    <header>
+                        <img src="https://static.wixstatic.com/media/fdd745_d266b548f51c43cd8532994122bf4db6~mv2.png/v1/crop/x_0,y_0,w_1006,h_640/fill/w_121,h_77,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/seqa-lo.png" alt="Seqa Logo">
+                        <h1>Seqa Salesmen Report</h1>
+                        <p>Generated on ${new Date().toLocaleString()}</p>
+                    </header>
+                    <div class="report-container">
+                        <table>
+                            <thead>
+                                <tr><th>Name</th><th>SalesBuzz Code</th><th>Company</th><th>Branch</th><th>Device Type</th><th>Device Serial</th><th>Printer Type</th><th>Printer Serial</th><th>Verified</th><th>SOTI</th><th>SalesBuzz</th><th>Added Date</th><th>Edited Date</th><th>Comments</th></tr>
+                            </thead>
+                            <tbody>
+                                ${rows.map(row => `<tr>${Array.from(row.cells).map(cell => `<td>${cell.querySelector('.status-checkbox') ? (cell.querySelector('.status-checkbox').checked ? 'Yes' : 'No') : cell.textContent}</td>`).join('')}</tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <footer><p>© ${new Date().getFullYear()} Seqa. All rights reserved.</p></footer>
+                </body>
+                </html>
             `;
-            const blob = new Blob([reportHTML], { type: 'text/html' });
             const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
+            link.href = URL.createObjectURL(new Blob([reportHTML], { type: 'text/html' }));
             link.download = `Seqa_Salesmen_Report_${new Date().toISOString().slice(0, 10)}.html`;
-            document.body.appendChild(link);
             link.click();
-            document.body.removeChild(link);
             closeReportPopup();
-        };
+        }
 
-        const showAuditLog = () => {
+        function showAuditLog() {
             ELEMENTS.auditLogList.innerHTML = auditLog.map(entry => `
                 <li class="audit-entry">
                     <span class="audit-timestamp">${entry.timestamp}</span>
@@ -1248,114 +698,112 @@
             `).join('');
             ELEMENTS.auditPopup.style.display = 'block';
             ELEMENTS.auditOverlay.style.display = 'block';
-        };
+        }
 
-        const filterAuditLog = () => {
+        function filterAuditLog() {
             const searchTerm = ELEMENTS.auditSearch.value.toLowerCase();
-            ELEMENTS.auditLogList.innerHTML = auditLog
-                .filter(entry => `${entry.timestamp} ${entry.user} ${entry.action} ${entry.details}`.toLowerCase().includes(searchTerm))
-                .map(entry => `
-                    <li class="audit-entry">
-                        <span class="audit-timestamp">${entry.timestamp}</span>
-                        <span class="audit-user">[${entry.user}]</span>
-                        <span class="audit-action ${entry.action.toLowerCase().split(' ')[0]}">${entry.action}</span>
-                        <span class="audit-details">${entry.details}</span>
-                    </li>
-                `).join('');
-        };
+            ELEMENTS.auditLogList.innerHTML = auditLog.filter(entry => `${entry.timestamp} ${entry.user} ${entry.action} ${entry.details}`.toLowerCase().includes(searchTerm)).map(entry => `
+                <li class="audit-entry">
+                    <span class="audit-timestamp">${entry.timestamp}</span>
+                    <span class="audit-user">[${entry.user}]</span>
+                    <span class="audit-action ${entry.action.toLowerCase().split(' ')[0]}">${entry.action}</span>
+                    <span class="audit-details">${entry.details}</span>
+                </li>
+            `).join('');
+        }
 
-        const closeAuditPopup = () => { ELEMENTS.auditPopup.style.display = 'none'; ELEMENTS.auditOverlay.style.display = 'none'; };
+        function closeAuditPopup() {
+            ELEMENTS.auditPopup.style.display = 'none';
+            ELEMENTS.auditOverlay.style.display = 'none';
+        }
+
         ELEMENTS.auditOverlay.onclick = closeAuditPopup;
 
-        const downloadAuditLog = () => {
+        function downloadAuditLog() {
             const logText = auditLog.map(entry => `${entry.timestamp} [${entry.user}] ${entry.action}: ${entry.details}`).join('\n');
-            const blob = new Blob([logText], { type: 'text/plain' });
             const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
+            link.href = URL.createObjectURL(new Blob([logText], { type: 'text/plain' }));
             link.download = `Seqa_Audit_Log_${new Date().toISOString().slice(0, 10)}.txt`;
-            document.body.appendChild(link);
             link.click();
-            document.body.removeChild(link);
             closeAuditPopup();
-        };
+        }
 
-        const exportSelectedToExcel = () => {
+        function exportSelectedToExcel() {
             const selectedRows = Array.from(document.querySelectorAll('tr.selected'));
             if (!selectedRows.length) return alert("No salesmen selected.");
-
             const tempTable = document.createElement('table');
-            tempTable.innerHTML = `
-                <thead>${document.querySelector('#salesmanTable thead').innerHTML}</thead>
-                <tbody>${selectedRows.map(row => `<tr>${row.innerHTML}</tr>`).join('')}</tbody>
-            `;
-            try {
-                const workbook = XLSX.utils.table_to_book(tempTable, { sheet: "Selected Salesmen" });
-                XLSX.writeFile(workbook, "Selected_SalesmenData.xlsx");
-            } catch (e) { alert("Export failed: " + e.message); }
-        };
+            tempTable.innerHTML = `<thead>${document.querySelector('#salesmanTable thead').innerHTML}</thead><tbody>${selectedRows.map(row => `<tr>${row.innerHTML}</tr>`).join('')}</tbody>`;
+            const workbook = XLSX.utils.table_to_book(tempTable, { sheet: "Selected Salesmen" });
+            XLSX.writeFile(workbook, "Selected_SalesmenData.xlsx");
+        }
 
-        const bulkDelete = async () => {
-            const selected = Array.from(document.querySelectorAll('tr.selected'));
-            if (!selected.length) return alert("No salesmen selected.");
-            if (confirm(`Are you sure you want to delete ${selected.length} salesmen?`)) {
-                const ids = selected.map(row => row.dataset.id);
-                const { data: deletedData, error: fetchError } = await supabase.from('salesmen').select('*').in('id', ids);
-                if (fetchError) {
-                    console.error('Error fetching salesmen for undo:', fetchError.message);
-                    return alert("Failed to fetch salesmen data: " + fetchError.message);
-                }
+        async function bulkDelete() {
+            const selectedRows = Array.from(document.querySelectorAll('tr.selected'));
+            if (!selectedRows.length) return alert("No salesmen selected.");
+            if (!confirm(`Are you sure you want to delete ${selectedRows.length} salesmen?`)) return;
+            const ids = selectedRows.map(row => row.dataset.id);
+            const { data: deletedData, error: fetchError } = await supabase.from('salesmen').select('*').in('id', ids);
+            if (fetchError) return alert("Failed to fetch salesmen data: " + fetchError.message);
+            const { error } = await supabase.from('salesmen').delete().in('id', ids);
+            if (error) return alert("Failed to delete salesmen: " + error.message);
+            lastDeletedRows = deletedData.map((data, i) => ({ data, index: selectedRows[i].rowIndex }));
+            selectedRows.forEach(row => {
+                logAction("Bulk Delete Salesman", `${row.cells[0].textContent} (Device Serial: ${row.cells[5].textContent}, Printer Serial: ${row.cells[7].textContent})`);
+                row.remove();
+            });
+            ELEMENTS.undoButton.disabled = false;
+            filterTable();
+            updatePagination();
+        }
 
-                const { error } = await supabase.from('salesmen').delete().in('id', ids);
-                if (error) {
-                    console.error('Error bulk deleting:', error.message);
-                    return alert("Failed to delete salesmen: " + error.message);
-                }
-                lastDeletedRows = deletedData.map((data, index) => ({ data, index: selected[index].rowIndex }));
-                selected.forEach(row => {
-                    logAction("Bulk Delete Salesman", `${row.cells[0].textContent} (Device Serial: ${row.cells[5].textContent}, Printer Serial: ${row.cells[7].textContent})`);
-                    row.remove();
-                });
-                ELEMENTS.undoButton.disabled = false;
-                filterTable();
-                updatePagination();
-            }
-        };
-
-        const loadSalesmen = async () => {
+        async function loadSalesmen() {
             const { data, error } = await supabase.from('salesmen').select('*');
             if (error) {
                 console.error('Error loading salesmen:', error.message);
-                return;
+                return alert("Failed to load salesmen: " + error.message);
             }
-            ELEMENTS.salesmanTableBody.innerHTML = "";
-            data.forEach(salesman => {
-                const row = ELEMENTS.salesmanTableBody.insertRow();
-                row.dataset.id = salesman.id;
-                [salesman.name, salesman.salesbuzz_code, salesman.company, salesman.branch, salesman.device_type, salesman.device_serial, salesman.printer_type, salesman.printer_serial, salesman.verified, salesman.soti, salesman.salesbuzz, salesman.added_date, salesman.edited_date || "N/A", salesman.comments || ""].forEach((val, index) => {
-                    const cell = row.insertCell();
-                    if (index === 8 || index === 9 || index === 10) {
-                        cell.innerHTML = `<input type="checkbox" class="status-checkbox" ${val ? "checked" : ""} onchange="toggleStatus(this, ${index})">`;
-                    } else if (index === 5) { // Device Serial
-                        cell.innerHTML = `<span class="device-serial">${val}</span>`;
-                    } else if (index === 7) { // Printer Serial
-                        cell.innerHTML = `<span class="printer-serial">${val}</span>`;
-                    } else {
-                        cell.textContent = val;
-                    }
-                });
-                row.addEventListener('click', (e) => toggleRowSelection(row, e));
-                row.addEventListener('dblclick', (e) => {
-                    if (e.target.classList.contains('device-serial') || e.target.classList.contains('printer-serial')) return;
-                    showActionModal(row);
-                });
-                row.querySelector('.device-serial')?.addEventListener('click', () => showRepairModal(row, 'device'));
-                row.querySelector('.printer-serial')?.addEventListener('click', () => showRepairModal(row, 'printer'));
-            });
+            ELEMENTS.salesmanTableBody.innerHTML = data.map(s => `
+                <tr data-id="${s.id}" data-visible="true">
+                    <td>${s.name}</td>
+                    <td>${s.salesbuzz_code}</td>
+                    <td>${s.company}</td>
+                    <td>${s.branch}</td>
+                    <td>${s.device_type}</td>
+                    <td><span class="device-serial">${s.device_serial}</span></td>
+                    <td>${s.printer_type}</td>
+                    <td><span class="printer-serial">${s.printer_serial}</span></td>
+                    <td><input type="checkbox" class="status-checkbox" ${s.verified ? "checked" : ""} onchange="toggleStatus(this, 8)"></td>
+                    <td><input type="checkbox" class="status-checkbox" ${s.soti ? "checked" : ""} onchange="toggleStatus(this, 9)"></td>
+                    <td><input type="checkbox" class="status-checkbox" ${s.salesbuzz ? "checked" : ""} onchange="toggleStatus(this, 10)"></td>
+                    <td>${s.added_date}</td>
+                    <td>${s.edited_date || "N/A"}</td>
+                    <td>${s.comments || ""}</td>
+                </tr>
+            `).join('');
             filterTable();
             updatePagination();
-        };
+        }
 
-        ELEMENTS.rowsPerPage.value = rowsPerPage;
+        ELEMENTS.salesmanTableBody.addEventListener('click', e => {
+            const row = e.target.closest('tr');
+            if (!row) return;
+            if (e.target.classList.contains('status-checkbox')) return;
+            if (e.target.classList.contains('device-serial')) showRepairModal(row, 'device');
+            else if (e.target.classList.contains('printer-serial')) showRepairModal(row, 'printer');
+            else toggleRowSelection(row, e);
+        });
+
+        ELEMENTS.salesmanTableBody.addEventListener('dblclick', e => {
+            const row = e.target.closest('tr');
+            if (row && !e.target.classList.contains('device-serial') && !e.target.classList.contains('printer-serial')) showActionModal(row);
+        });
+
+        ELEMENTS.commentPopup.querySelector('#saveCommentBtn').onclick = saveComment;
+        ELEMENTS.commentPopup.querySelector('#closePopupBtn').onclick = () => {
+            ELEMENTS.commentPopup.style.display = 'none';
+            ELEMENTS.commentOverlay.style.display = 'none';
+        };
+        ELEMENTS.commentOverlay.onclick = ELEMENTS.commentPopup.querySelector('#closePopupBtn').onclick;
     </script>
 </body>
 </html>

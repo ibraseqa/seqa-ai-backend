@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seqa Repair Devices</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=groups" />
     <style>
         :root {
             --primary: #1e3a5f;
@@ -44,11 +45,19 @@
         }
         header img {
             height: 35px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
         }
+        header img:hover { transform: scale(1.05); }
         header h1 {
             font-size: 20px;
             margin-left: 15px;
             font-weight: 500;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         .header-button {
             background: var(--accent);
@@ -62,6 +71,24 @@
         }
         .header-button:hover {
             background: var(--secondary);
+        }
+        .home-button, .salesmen-button {
+            background: none;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            padding: 0.5rem;
+            transition: var(--transition);
+        }
+        .home-button:hover, .salesmen-button:hover { transform: scale(1.1); }
+        .home-button svg {
+            width: 24px;
+            height: 24px;
+            fill: #fff;
+        }
+        .salesmen-button span.material-symbols-outlined {
+            font-size: 24px;
+            color: #fff;
         }
 
         main {
@@ -261,12 +288,19 @@
 <body>
     <header>
         <div style="display: flex; align-items: center;">
-            <img src="https://static.wixstatic.com/media/fdd745_d266b548f51c43cd8532994122bf4db6~mv2.png/v1/crop/x_0,y_0,w_1006,h_640/fill/w_121,h_77,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/seqa-lo.png" alt="Seqa Logo">
+            <img src="https://static.wixstatic.com/media/fdd745_d266b548f51c43cd8532994122bf4db6~mv2.png/v1/crop/x_0,y_0,w_1006,h_640/fill/w_121,h_77,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/seqa-lo.png" alt="Seqa Logo" onclick="window.location.href='index.html'">
             <h1>Repair Devices</h1>
         </div>
-        <div>
+        <div class="header-right">
+            <button class="home-button" onclick="window.location.href='index.html'">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                </svg>
+            </button>
+            <button class="salesmen-button" onclick="window.location.href='salesmen.html'">
+                <span class="material-symbols-outlined">groups</span>
+            </button>
             <button class="header-button" onclick="showAuditModal()">Audit Log</button>
-            <a href="index.html"><button class="header-button">Back to Home</button></a>
         </div>
     </header>
     <main>
