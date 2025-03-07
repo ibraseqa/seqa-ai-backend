@@ -16,7 +16,7 @@
             --accent: #86bcd3;
             --background: #f5f7fa;
             --text: #2d3748;
-            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
             --transition: all 0.3s ease;
             --border-color: #d1d5db;
             --action-edit: #38a169;
@@ -43,10 +43,10 @@
         .home-button, .repair-button { background: none; border: none; color: #fff; cursor: pointer; padding: 0.5rem; transition: var(--transition); }
         .home-button:hover, .repair-button:hover { transform: scale(1.1); }
         .home-button svg { width: 24px; height: 24px; fill: #fff; }
-        .header-buttons { display: none; position: absolute; top: 100%; right: 1rem; background: var(--menu-bg); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); border-radius: 8px; flex-direction: column; padding: 0.5rem; z-index: 11; border: 1px solid var(--border-color); opacity: 1; }
-        .header-buttons.active { display: flex; }
-        .toggle-button { background: var(--menu-bg); color: var(--text); padding: 0.6rem 1.2rem; border: none; border-radius: 6px; font-weight: 500; font-size: 0.9rem; cursor: pointer; transition: var(--transition); width: 100%; text-align: left; letter-spacing: 0.5px; }
-        .toggle-button:hover { background: var(--menu-hover); color: var(--primary); transform: translateX(2px); }
+        .header-buttons { display: none; position: absolute; top: 100%; right: 1rem; background: var(--menu-bg); box-shadow: var(--shadow); border-radius: 12px; flex-direction: column; padding: 0.75rem; z-index: 11; border: 1px solid var(--border-color); transform: translateY(10px); opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease; }
+        .header-buttons.active { display: flex; opacity: 1; transform: translateY(0); }
+        .toggle-button { background: var(--menu-bg); color: var(--text); padding: 0.6rem 1.2rem; border: none; border-radius: 8px; font-weight: 500; font-size: 0.9rem; cursor: pointer; transition: var(--transition); width: 100%; text-align: left; letter-spacing: 0.5px; }
+        .toggle-button:hover { background: var(--menu-hover); color: var(--primary); transform: translateX(4px); }
         .toggle-button:disabled { opacity: 0.5; cursor: not-allowed; }
         main { flex: 1; padding: 0.75rem; overflow-y: auto; display: flex; flex-direction: column; }
         .container { background: #fff; padding: 1.5rem; border-radius: 10px; box-shadow: var(--shadow); transition: var(--transition); flex: 1; border: 1px solid var(--border-color); display: flex; flex-direction: column; overflow: hidden; }
@@ -80,12 +80,13 @@
         .rows-per-page select { padding: 0.3rem; font-size: 0.8rem; border-radius: 4px; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); justify-content: center; align-items: center; z-index: 100; }
         .modal.active { display: flex; }
-        .modal-content { background: #fff; padding: 1.5rem; border-radius: 10px; width: 90%; max-width: 350px; text-align: center; box-shadow: var(--shadow); border: 1px solid var(--border-color); }
-        .modal-button { margin: 0.3rem; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; transition: var(--transition); border: 1px solid transparent; }
-        .confirm-button { background: #38a169; border-color: #38a169; color: #fff; }
-        .confirm-button:hover { background: #2f855a; border-color: #2f855a; }
-        .cancel-button { background: #e53e3e; border-color: #e53e3e; color: #fff; }
-        .cancel-button:hover { background: #c53030; border-color: #c53030; }
+        .modal-content { background: #fff; padding: 1.5rem; border-radius: 12px; width: 90%; max-width: 400px; box-shadow: var(--shadow); border: none; transform: scale(0.95); transition: transform 0.2s ease; }
+        .modal-content.active { transform: scale(1); }
+        .modal-button { margin: 0.5rem 0.25rem; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 600; font-size: 0.9rem; transition: var(--transition); border: none; cursor: pointer; }
+        .confirm-button { background: #38a169; color: #fff; }
+        .confirm-button:hover { background: #2f855a; transform: translateY(-2px); }
+        .cancel-button { background: #e53e3e; color: #fff; }
+        .cancel-button:hover { background: #c53030; transform: translateY(-2px); }
         #repairModal select, #actionModal select { width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid var(--border-color); border-radius: 4px; }
         #commentPopup, #statsPopup, #reportPopup, #auditPopup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 1.5rem; border-radius: 10px; box-shadow: var(--shadow); z-index: 1001; width: 90%; max-width: 500px; border: 1px solid var(--border-color); }
         #commentOverlay, #statsOverlay, #reportOverlay, #auditOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1000; }
@@ -103,6 +104,14 @@
         .audit-action.edit { color: var(--audit-edit); }
         .audit-action.remove { color: var(--audit-remove); }
         .audit-action.toggle { color: var(--audit-toggle); }
+        #exportPopup .modal-content { max-width: 450px; padding: 2rem; }
+        #exportPopup h3 { margin-bottom: 1.5rem; font-size: 1.5rem; }
+        #exportPopup select { width: 100%; padding: 0.6rem; margin-bottom: 1rem; border-radius: 6px; border: 1px solid var(--border-color); }
+        #exportPopup .modal-button { width: 45%; }
+        #actionModal .modal-content { max-width: 350px; padding: 2rem; }
+        #actionModal h3 { margin-bottom: 1.5rem; font-size: 1.5rem; }
+        #actionModal select { width: 100%; padding: 0.6rem; margin-bottom: 1rem; border-radius: 6px; border: 1px solid var(--border-color); }
+        #actionModal .modal-button { width: 45%; }
     </style>
 </head>
 <body>
@@ -171,9 +180,9 @@
     </main>
     <div class="modal" id="confirmationModal"><div class="modal-content"><p id="confirmationMessage">Do you want to save the changes?</p><button class="modal-button confirm-button" onclick="confirmEdit()">Confirm</button><button class="modal-button cancel-button" onclick="cancelEdit()">Cancel</button></div></div>
     <div class="modal" id="repairModal"><div class="modal-content"><p>Send to Repair</p><select id="repairReason" required><option value="">Select Reason</option><option value="Screen Cracked">Screen Cracked</option><option value="Battery Failure">Battery Failure</option><option value="Software Issue">Software Issue</option><option value="Hardware Failure">Hardware Failure</option><option value="Other">Other</option></select><button class="modal-button confirm-button" onclick="confirmSendToRepair()">Send</button><button class="modal-button cancel-button" onclick="closeRepairModal()">Cancel</button></div></div>
-    <div class="modal" id="actionModal"><div class="modal-content"><p>Select Action</p><select id="actionChoice" required><option value="">Choose an Action</option><option value="edit">Edit</option><option value="remove">Remove</option><option value="comment">Comment</option></select><button class="modal-button confirm-button" onclick="executeAction()">Execute</button><button class="modal-button cancel-button" onclick="closeActionModal()">Cancel</button></div></div>
+    <div class="modal" id="actionModal"><div class="modal-content"><h3>Select Action</h3><select id="actionChoice" required><option value="">Choose an Action</option><option value="edit">Edit</option><option value="remove">Remove</option><option value="comment">Add/Edit Comment</option><option value="removeComment">Remove Comment</option></select><button class="modal-button confirm-button" onclick="executeAction()">Execute</button><button class="modal-button cancel-button" onclick="closeActionModal()">Cancel</button></div></div>
     <div id="commentOverlay"></div><div id="commentPopup"><h3>Edit Comment</h3><textarea id="commentText" rows="5" placeholder="Enter your comment here..."></textarea><button class="modal-button confirm-button" onclick="saveComment()">Save Comment</button><button class="modal-button cancel-button" onclick="closeCommentPopup()">Close</button></div>
-    <div id="exportPopup" class="modal"><div class="modal-content"><p>Choose Export Format</p><button class="modal-button confirm-button" onclick="exportToExcel()">Export to Excel</button><button class="modal-button confirm-button" onclick="exportToPDF()">Export to PDF</button><button class="modal-button cancel-button" onclick="closeExportPopup()">Cancel</button></div></div>
+    <div id="exportPopup" class="modal"><div class="modal-content"><h3>Export Data</h3><select id="exportCompanyFilter"><option value="">All Companies</option><option value="Zulal">Zulal</option><option value="Sehatik">Sehatik</option><option value="Alshafiya">Alshafiya</option><option value="Rhine">Rhine</option><option value="Ramah">Ramah</option><option value="ALSAD">ALSAD</option></select><button class="modal-button confirm-button" onclick="exportToExcel()">Export to Excel</button><button class="modal-button confirm-button" onclick="exportToPDF()">Export to PDF</button><button class="modal-button cancel-button" onclick="closeExportPopup()">Cancel</button></div></div>
     <div id="statsOverlay"></div><div id="statsPopup"><h3>Quick Stats</h3><ul id="statsList"></ul><button class="modal-button cancel-button" onclick="closeStatsPopup()">Close</button></div>
     <div id="reportOverlay"></div><div id="reportPopup"><h3>Generate Report</h3><p>Download a detailed HTML report of all salesmen.</p><button class="modal-button confirm-button" onclick="downloadReport()">Download Report</button><button class="modal-button cancel-button" onclick="closeReportPopup()">Cancel</button></div>
     <div id="auditOverlay"></div><div id="auditPopup"><h3>Audit Log</h3><input type="text" id="auditSearch" placeholder="Search log..." onkeyup="filterAuditLog()"><ul id="auditLogList"></ul><button class="modal-button confirm-button" onclick="downloadAuditLog()">Download Log</button><button class="modal-button cancel-button" onclick="closeAuditPopup()">Close</button></div>
@@ -216,7 +225,9 @@
             repairModal: document.getElementById("repairModal"),
             repairReason: document.getElementById("repairReason"),
             actionModal: document.getElementById("actionModal"),
-            actionChoice: document.getElementById("actionChoice")
+            actionChoice: document.getElementById("actionChoice"),
+            commentText: document.getElementById("commentText"),
+            exportCompanyFilter: document.getElementById("exportCompanyFilter")
         };
 
         document.addEventListener("DOMContentLoaded", () => {
@@ -224,18 +235,25 @@
             else loadSalesmen();
             ELEMENTS.rowsPerPage.value = rowsPerPage;
             loadAuditLog();
+            document.addEventListener('click', closeMenuOnClickOutside);
         });
 
         function toggleMenu() { ELEMENTS.headerButtons.classList.toggle("active"); }
 
+        function closeMenuOnClickOutside(e) {
+            if (!ELEMENTS.headerButtons.contains(e.target) && !document.querySelector('.hamburger').contains(e.target) && ELEMENTS.headerButtons.classList.contains('active')) {
+                ELEMENTS.headerButtons.classList.remove('active');
+            }
+        }
+
         async function logAction(action, details) {
             const timestamp = new Date().toLocaleString();
-            const entry = { timestamp, user: currentUser, action, details };
+            const entry = { timestamp, username: currentUser, action, details };
             const { error } = await supabase.from('audit_log').insert(entry);
             if (error) console.error('Error logging action:', error.message);
             else {
-                auditLog.push(entry);
-                if (auditLog.length > AUDIT_LOG_LIMIT) auditLog.shift();
+                auditLog.unshift(entry);
+                if (auditLog.length > AUDIT_LOG_LIMIT) auditLog.pop();
                 updateAuditLogDisplay();
             }
         }
@@ -244,7 +262,7 @@
             const { data, error } = await supabase.from('audit_log').select('*').order('timestamp', { ascending: false }).limit(AUDIT_LOG_LIMIT);
             if (error) console.error('Error loading audit log:', error.message);
             else {
-                auditLog = data.reverse();
+                auditLog = data;
                 updateAuditLogDisplay();
             }
         }
@@ -253,7 +271,7 @@
             ELEMENTS.auditLogList.innerHTML = auditLog.map(entry => `
                 <li class="audit-entry">
                     <span class="audit-timestamp">${entry.timestamp}</span>
-                    <span class="audit-user">[${entry.user}]</span>
+                    <span class="audit-user">[${entry.username}]</span>
                     <span class="audit-action ${entry.action.toLowerCase().split(' ')[0]}">${entry.action}</span>
                     <span class="audit-details">${entry.details}</span>
                 </li>
@@ -269,9 +287,9 @@
                 return false;
             }
             return data.some(s => 
-                (s.device_serial.trim().toLowerCase() === deviceSerial.trim().toLowerCase() && s.device_serial !== "Sent to Repair") || 
-                (s.printer_serial.trim().toLowerCase() === printerSerial.trim().toLowerCase() && s.printer_serial !== "Sent to Repair") || 
-                (s.salesbuzz_code.trim() === salesbuzzCode.trim() && s.company === company)
+                (s.device_serial.trim().toLowerCase() === deviceSerial.trim().toLowerCase() && s.device_serial !== "Sent to Repair" && s.id !== excludeId) || 
+                (s.printer_serial.trim().toLowerCase() === printerSerial.trim().toLowerCase() && s.printer_serial !== "Sent to Repair" && s.id !== excludeId) || 
+                (s.salesbuzz_code.trim() === salesbuzzCode.trim() && s.company === company && s.id !== excludeId)
             );
         }
 
@@ -383,7 +401,7 @@
 
         function showSaveModal() {
             ELEMENTS.confirmationMessage.textContent = "Do you want to save the changes?";
-            ELEMENTS.confirmationModal.style.display = "flex";
+            ELEMENTS.confirmationModal.classList.add('active');
         }
 
         async function confirmEdit() {
@@ -398,11 +416,15 @@
                 printer_type: editingRow.cells[6].querySelector('input')?.value.trim() || editingRow.cells[6].textContent,
                 edited_date: new Date().toLocaleDateString()
             };
-            if (await checkDuplicates(editingRow.cells[5].textContent, editingRow.cells[7].textContent, updatedData.salesbuzz_code, updatedData.company, id)) return alert("This Device Serial, Printer Serial, or SalesBuzz Code and Company combination is already in use.");
+            const deviceSerial = editingRow.cells[5].textContent.trim();
+            const printerSerial = editingRow.cells[7].textContent.trim();
+            if (await checkDuplicates(deviceSerial, printerSerial, updatedData.salesbuzz_code, updatedData.company, id)) {
+                return alert("This SalesBuzz Code and Company combination is already in use by another salesman.");
+            }
             const { error } = await supabase.from('salesmen').update(updatedData).eq('id', id);
             if (error) return alert("Failed to edit salesman: " + error.message);
-            logAction("Edit Salesman", `${updatedData.name} (Device Serial: ${editingRow.cells[5].textContent}, Printer Serial: ${editingRow.cells[7].textContent})`);
-            ELEMENTS.confirmationModal.style.display = "none";
+            logAction("Edit Salesman", `${updatedData.name} (Device Serial: ${deviceSerial}, Printer Serial: ${printerSerial})`);
+            ELEMENTS.confirmationModal.classList.remove('active');
             editingRow = null;
             loadSalesmen();
         }
@@ -412,18 +434,18 @@
                 loadSalesmen();
                 editingRow = null;
             }
-            ELEMENTS.confirmationModal.style.display = "none";
+            ELEMENTS.confirmationModal.classList.remove('active');
         }
 
         function showRepairModal(row, type) {
             repairItemRow = row;
             repairItemType = type;
-            ELEMENTS.repairModal.style.display = "flex";
+            ELEMENTS.repairModal.classList.add('active');
             ELEMENTS.repairReason.value = "";
         }
 
         function closeRepairModal() {
-            ELEMENTS.repairModal.style.display = "none";
+            ELEMENTS.repairModal.classList.remove('active');
             repairItemRow = null;
             repairItemType = null;
         }
@@ -455,21 +477,39 @@
             if (updateError) return alert("Failed to update salesman: " + updateError.message);
             logAction(`Send ${repairItemType === "device" ? "Device" : "Printer"} to Repair`, `${repairItemRow.cells[0].textContent} - ${repairItemType === "device" ? "Device" : "Printer"} Serial: ${serial} (Reason: ${reason})`);
             closeRepairModal();
-            loadSalesmen();
+            const filters = {
+                name: ELEMENTS.searchInput.value,
+                company: ELEMENTS.companyFilter.value,
+                branch: ELEMENTS.branchFilter.value,
+                deviceSerial: ELEMENTS.deviceSerialFilter.value,
+                printerSerial: ELEMENTS.printerSerialFilter.value
+            };
+            loadSalesmen(() => {
+                ELEMENTS.searchInput.value = filters.name;
+                ELEMENTS.companyFilter.value = filters.company;
+                ELEMENTS.branchFilter.value = filters.branch;
+                ELEMENTS.deviceSerialFilter.value = filters.deviceSerial;
+                ELEMENTS.printerSerialFilter.value = filters.printerSerial;
+                filterTable();
+            });
         }
 
         function showActionModal(row) {
             actionRow = row;
-            ELEMENTS.actionModal.style.display = "flex";
+            ELEMENTS.actionModal.classList.add('active');
             ELEMENTS.actionChoice.value = "";
+            setTimeout(() => ELEMENTS.actionModal.querySelector('.modal-content').classList.add('active'), 10);
         }
 
         function closeActionModal() {
-            ELEMENTS.actionModal.style.display = "none";
-            actionRow = null;
+            ELEMENTS.actionModal.querySelector('.modal-content').classList.remove('active');
+            setTimeout(() => {
+                ELEMENTS.actionModal.classList.remove('active');
+                actionRow = null;
+            }, 200);
         }
 
-        function executeAction() {
+        async function executeAction() {
             if (!actionRow) return;
             const action = ELEMENTS.actionChoice.value;
             if (!action) return alert("Please select an action.");
@@ -477,8 +517,17 @@
                 case "edit": editSalesman(actionRow); break;
                 case "remove": removeRow(actionRow); break;
                 case "comment": showCommentPopup(actionRow); break;
+                case "removeComment": await removeComment(actionRow); break;
             }
             closeActionModal();
+        }
+
+        async function removeComment(row) {
+            const id = row.dataset.id;
+            const { error } = await supabase.from('salesmen').update({ comments: '', edited_date: new Date().toLocaleDateString() }).eq('id', id);
+            if (error) return alert("Failed to remove comment: " + error.message);
+            logAction("Remove Comment", `${row.cells[0].textContent} - Comment cleared`);
+            loadSalesmen();
         }
 
         function showCommentPopup(row) {
@@ -495,14 +544,28 @@
             const { error } = await supabase.from('salesmen').update({ comments: comment, edited_date: new Date().toLocaleDateString() }).eq('id', id);
             if (error) return alert("Failed to update comment: " + error.message);
             logAction("Update Comment", `${currentRow.cells[0].textContent} - Comment changed to "${comment}"`);
-            currentRow.cells[13].textContent = comment;
+            const filters = {
+                name: ELEMENTS.searchInput.value,
+                company: ELEMENTS.companyFilter.value,
+                branch: ELEMENTS.branchFilter.value,
+                deviceSerial: ELEMENTS.deviceSerialFilter.value,
+                printerSerial: ELEMENTS.printerSerialFilter.value
+            };
             closeCommentPopup();
-            loadSalesmen();
+            loadSalesmen(() => {
+                ELEMENTS.searchInput.value = filters.name;
+                ELEMENTS.companyFilter.value = filters.company;
+                ELEMENTS.branchFilter.value = filters.branch;
+                ELEMENTS.deviceSerialFilter.value = filters.deviceSerial;
+                ELEMENTS.printerSerialFilter.value = filters.printerSerial;
+                filterTable();
+            });
         }
 
         function closeCommentPopup() {
             ELEMENTS.commentPopup.style.display = 'none';
             ELEMENTS.commentOverlay.style.display = 'none';
+            currentRow = null;
         }
 
         async function undoLastAction() {
@@ -565,7 +628,6 @@
                     printerSerial.textContent.toLowerCase().includes(filters.printerSerial)
                 ) ? "true" : "false";
             });
-            currentPage = 1;
             updatePagination();
         }
 
@@ -608,34 +670,66 @@
             updatePagination();
         }
 
-        function showExportPopup() { ELEMENTS.exportPopup.style.display = "flex"; }
-        function closeExportPopup() { ELEMENTS.exportPopup.style.display = "none"; }
+        function showExportPopup() {
+            ELEMENTS.exportPopup.classList.add('active');
+            setTimeout(() => ELEMENTS.exportPopup.querySelector('.modal-content').classList.add('active'), 10);
+        }
 
-        function exportToExcel() {
-            const workbook = XLSX.utils.table_to_book(document.getElementById("salesmanTable"), { sheet: "Salesmen" });
-            XLSX.writeFile(workbook, "SalesmenData.xlsx");
+        function closeExportPopup() {
+            ELEMENTS.exportPopup.querySelector('.modal-content').classList.remove('active');
+            setTimeout(() => ELEMENTS.exportPopup.classList.remove('active'), 200);
+        }
+
+        async function exportToExcel() {
+            const companyFilter = ELEMENTS.exportCompanyFilter.value;
+            let query = supabase.from('salesmen').select('*');
+            if (companyFilter) query = query.eq('company', companyFilter);
+            const { data, error } = await query;
+            if (error) return alert("Failed to fetch salesmen for export: " + error.message);
+
+            const tempTable = document.createElement('table');
+            tempTable.innerHTML = `
+                <thead><tr><th>Name</th><th>SalesBuzz Code</th><th>Company</th><th>Branch</th><th>Device Type</th><th>Device Serial</th><th>Printer Type</th><th>Printer Serial</th><th>Verified</th><th>SOTI</th><th>SalesBuzz</th><th>Added Date</th><th>Edited Date</th><th>Comments</th></tr></thead>
+                <tbody>${data.map(s => `<tr><td>${s.name}</td><td>${s.salesbuzz_code}</td><td>${s.company}</td><td>${s.branch}</td><td>${s.device_type}</td><td>${s.device_serial}</td><td>${s.printer_type}</td><td>${s.printer_serial}</td><td>${s.verified ? 'Yes' : 'No'}</td><td>${s.soti ? 'Yes' : 'No'}</td><td>${s.salesbuzz ? 'Yes' : 'No'}</td><td>${s.added_date}</td><td>${s.edited_date || 'N/A'}</td><td>${s.comments || ''}</td></tr>`).join('')}</tbody>
+            `;
+            const workbook = XLSX.utils.table_to_book(tempTable, { sheet: "Salesmen" });
+            XLSX.writeFile(workbook, `SalesmenData${companyFilter ? `_${companyFilter}` : ''}.xlsx`);
             closeExportPopup();
         }
 
-        function exportToPDF() {
+        async function exportToPDF() {
+            const companyFilter = ELEMENTS.exportCompanyFilter.value;
+            let query = supabase.from('salesmen').select('*');
+            if (companyFilter) query = query.eq('company', companyFilter);
+            const { data, error } = await query;
+            if (error) return alert("Failed to fetch salesmen for export: " + error.message);
+
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('l', 'pt', 'a4');
-            pdf.text("Salesmen Data", 40, 40);
-            pdf.autoTable({ html: '#salesmanTable', startY: 60, theme: 'striped', styles: { fontSize: 8, cellPadding: 4 }, margin: { left: 15, right: 15 } });
-            pdf.save('SalesmenData.pdf');
+            pdf.text(`Salesmen Data${companyFilter ? ` - ${companyFilter}` : ''}`, 40, 40);
+            pdf.autoTable({
+                head: [['Name', 'SalesBuzz Code', 'Company', 'Branch', 'Device Type', 'Device Serial', 'Printer Type', 'Printer Serial', 'Verified', 'SOTI', 'SalesBuzz', 'Added Date', 'Edited Date', 'Comments']],
+                body: data.map(s => [s.name, s.salesbuzz_code, s.company, s.branch, s.device_type, s.device_serial, s.printer_type, s.printer_serial, s.verified ? 'Yes' : 'No', s.soti ? 'Yes' : 'No', s.salesbuzz ? 'Yes' : 'No', s.added_date, s.edited_date || 'N/A', s.comments || '']),
+                startY: 60,
+                theme: 'striped',
+                styles: { fontSize: 8, cellPadding: 4 },
+                margin: { left: 15, right: 15 }
+            });
+            pdf.save(`SalesmenData${companyFilter ? `_${companyFilter}` : ''}.pdf`);
             closeExportPopup();
         }
 
-        function showStatsPopup() {
-            const rows = Array.from(ELEMENTS.salesmanTableBody.rows).filter(row => row.style.display !== "none");
+        async function showStatsPopup() {
+            const { data: allSalesmen, error } = await supabase.from('salesmen').select('*');
+            if (error) return alert("Failed to load stats: " + error.message);
             const stats = {
-                total: rows.length,
-                verified: rows.filter(row => row.cells[8].querySelector('.status-checkbox').checked).length,
-                soti: rows.filter(row => row.cells[9].querySelector('.status-checkbox').checked).length,
-                salesBuzz: rows.filter(row => row.cells[10].querySelector('.status-checkbox').checked).length,
+                total: allSalesmen.length,
+                verified: allSalesmen.filter(s => s.verified).length,
+                soti: allSalesmen.filter(s => s.soti).length,
+                salesBuzz: allSalesmen.filter(s => s.salesbuzz).length,
                 companies: {}
             };
-            rows.forEach(row => stats.companies[row.cells[2].textContent] = (stats.companies[row.cells[2].textContent] || 0) + 1);
+            allSalesmen.forEach(s => stats.companies[s.company] = (stats.companies[s.company] || 0) + 1);
             ELEMENTS.statsList.innerHTML = `
                 <li>Total Salesmen: ${stats.total}</li>
                 <li>Verified: ${stats.verified} (${stats.total ? (stats.verified / stats.total * 100).toFixed(1) : 0}%)</li>
@@ -723,10 +817,10 @@
 
         function filterAuditLog() {
             const searchTerm = ELEMENTS.auditSearch.value.toLowerCase();
-            ELEMENTS.auditLogList.innerHTML = auditLog.filter(entry => `${entry.timestamp} ${entry.user} ${entry.action} ${entry.details}`.toLowerCase().includes(searchTerm)).map(entry => `
+            ELEMENTS.auditLogList.innerHTML = auditLog.filter(entry => `${entry.timestamp} ${entry.username} ${entry.action} ${entry.details}`.toLowerCase().includes(searchTerm)).map(entry => `
                 <li class="audit-entry">
                     <span class="audit-timestamp">${entry.timestamp}</span>
-                    <span class="audit-user">[${entry.user}]</span>
+                    <span class="audit-user">[${entry.username}]</span>
                     <span class="audit-action ${entry.action.toLowerCase().split(' ')[0]}">${entry.action}</span>
                     <span class="audit-details">${entry.details}</span>
                 </li>
@@ -741,7 +835,7 @@
         ELEMENTS.auditOverlay.onclick = closeAuditPopup;
 
         function downloadAuditLog() {
-            const logText = auditLog.map(entry => `${entry.timestamp} [${entry.user}] ${entry.action}: ${entry.details}`).join('\n');
+            const logText = auditLog.map(entry => `${entry.timestamp} [${entry.username}] ${entry.action}: ${entry.details}`).join('\n');
             const link = document.createElement('a');
             link.href = URL.createObjectURL(new Blob([logText], { type: 'text/plain' }));
             link.download = `Seqa_Audit_Log_${new Date().toISOString().slice(0, 10)}.txt`;
@@ -773,7 +867,7 @@
             loadSalesmen();
         }
 
-        async function loadSalesmen() {
+        async function loadSalesmen(callback) {
             const { data, error } = await supabase.from('salesmen').select('*');
             if (error) {
                 console.error('Error loading salesmen:', error.message);
@@ -799,6 +893,7 @@
             `).join('');
             filterTable();
             updatePagination();
+            if (callback) callback();
         }
 
         ELEMENTS.salesmanTableBody.addEventListener('click', e => {
