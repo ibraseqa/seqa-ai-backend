@@ -8,7 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.18/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=construction" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=construction,history" />
     <style>
         :root {
             --primary: #1e3a5f;
@@ -30,6 +30,8 @@
             --hover-bg: #f1f5f9;
             --menu-bg: #ffffff;
             --menu-hover: #e6f0fa;
+            --history-bg: #f9fafb;
+            --history-header: #3498db;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { height: 100%; width: 100%; overflow: hidden; }
@@ -73,6 +75,8 @@
         .status-checkbox { cursor: pointer; }
         .device-serial, .printer-serial { color: var(--primary); cursor: pointer; text-decoration: underline; transition: color 0.3s ease; }
         .device-serial:hover, .printer-serial:hover { color: var(--secondary); }
+        .device-serial[data-status="repair"], .printer-serial[data-status="repair"] { color: #e53e3e; cursor: default; text-decoration: none; }
+        .device-serial[data-status="repair"]::after, .printer-serial[data-status="repair"]::after { content: '🔧'; font-size: 0.8rem; margin-left: 0.3rem; opacity: 0.7; }
         .pagination-container { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: var(--background); border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 10px 10px; z-index: 5; }
         .pagination-buttons button { padding: 0.3rem 0.6rem; margin: 0 0.2rem; font-size: 0.8rem; }
         .pagination-buttons button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -87,13 +91,82 @@
         .confirm-button:hover { background: #2f855a; transform: translateY(-2px); }
         .cancel-button { background: #e53e3e; color: #fff; }
         .cancel-button:hover { background: #c53030; transform: translateY(-2px); }
-        #repairModal select, #actionModal select { width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid var(--border-color); border-radius: 4px; }
-        #commentPopup, #statsPopup, #reportPopup, #auditPopup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 1.5rem; border-radius: 10px; box-shadow: var(--shadow); z-index: 1001; width: 90%; max-width: 500px; border: 1px solid var(--border-color); }
+        #repairModal select, #actionModal select, #switchModal select { width: 100%; padding: 0.5rem; margin: 0.5rem 0; border: 1px solid var(--border-color); border-radius: 4px; }
+        #commentPopup, #statsPopup, #reportPopup, #auditPopup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--history-bg); padding: 1.5rem; border-radius: 10px; box-shadow: var(--shadow); z-index: 1001; width: 90%; max-width: 600px; border: 1px solid var(--border-color); }
         #commentOverlay, #statsOverlay, #reportOverlay, #auditOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6); z-index: 1000; }
         textarea { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; resize: vertical; font-size: 0.9rem; }
         textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(30, 58, 95, 0.2); outline: none; }
         #statsPopup ul, #reportPopup ul, #auditPopup ul { list-style: none; padding: 0; margin: 0.75rem 0; max-height: 300px; overflow-y: auto; }
-        #statsPopup li, #reportPopup li, #auditPopup li { padding: 0.3rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; }
+        #statsPopup li, #reportPopup li, #auditPopup li { padding: 0.5rem 0; border-bottom: 1px solid var(--border-color); font-size: 0.85rem; }
+        #deviceHistoryPopup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--history-bg);
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            z-index: 1001;
+            width: 90%;
+            max-width: 600px;
+            border: 1px solid var(--border-color);
+        }
+        #deviceHistoryPopup h3 {
+            color: var(--primary);
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--primary);
+            padding-bottom: 0.3rem;
+        }
+        #deviceHistoryPopup table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0.75rem 0;
+        }
+        #deviceHistoryPopup th,
+        #deviceHistoryPopup td {
+            padding: 0.7rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.85rem;
+        }
+        #deviceHistoryPopup th {
+            background: var(--secondary);
+            color: #fff;
+            text-transform: uppercase;
+        }
+        #deviceHistoryPopup tr:hover {
+            background: var(--hover-bg);
+        }
+        #deviceHistoryPopup button {
+            background: var(--primary);
+            color: #fff;
+            padding: 0.6rem 1.2rem;
+            border: 1px solid var(--primary);
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 0.5rem;
+        }
+        #deviceHistoryPopup button:hover {
+            background: var(--secondary);
+            border-color: var(--secondary);
+            transform: translateY(-2px);
+        }
+        #deviceHistoryOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+        }
         #auditSearch { width: 100%; margin-bottom: 0.75rem; padding: 0.5rem; }
         .audit-entry { display: flex; flex-wrap: wrap; gap: 0.5rem; }
         .audit-entry span { display: inline-block; }
@@ -104,14 +177,14 @@
         .audit-action.edit { color: var(--audit-edit); }
         .audit-action.remove { color: var(--audit-remove); }
         .audit-action.toggle { color: var(--audit-toggle); }
-        #exportPopup .modal-content { max-width: 450px; padding: 2rem; }
-        #exportPopup h3 { margin-bottom: 1.5rem; font-size: 1.5rem; }
-        #exportPopup select { width: 100%; padding: 0.6rem; margin-bottom: 1rem; border-radius: 6px; border: 1px solid var(--border-color); }
-        #exportPopup .modal-button { width: 45%; }
-        #actionModal .modal-content { max-width: 350px; padding: 2rem; }
-        #actionModal h3 { margin-bottom: 1.5rem; font-size: 1.5rem; }
-        #actionModal select { width: 100%; padding: 0.6rem; margin-bottom: 1rem; border-radius: 6px; border: 1px solid var(--border-color); }
-        #actionModal .modal-button { width: 45%; }
+        #exportPopup .modal-content, #actionModal .modal-content, #switchModal .modal-content { max-width: 450px; padding: 2rem; }
+        #exportPopup h3, #actionModal h3, #switchModal h3 { margin-bottom: 1.5rem; font-size: 1.5rem; }
+        #exportPopup select, #actionModal select, #switchModal select { width: 100%; padding: 0.6rem; margin-bottom: 1rem; border-radius: 6px; border: 1px solid var(--border-color); }
+        #exportPopup .modal-button, #actionModal .modal-button, #switchModal .modal-button { width: 45%; }
+        #switchModal .search-container { margin-bottom: 1rem; }
+        #switchModal input[type="text"] { width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 4px; font-size: 0.9rem; }
+        #switchModal select { max-height: 150px; overflow-y: auto; }
+        #switchModal .checkbox-container { margin: 0.75rem 0; }
     </style>
 </head>
 <body>
@@ -158,6 +231,7 @@
             </div>
             <div class="filter-container">
                 <input type="text" id="searchInput" placeholder="Search by Name..." onkeyup="filterTable()">
+                <input type="text" id="salesBuzzCodeFilter" placeholder="Search by SalesBuzz Code..." onkeyup="filterTable()">
                 <select id="companyFilter" onchange="filterTable()"><option value="">All Companies</option><option value="Zulal">Zulal</option><option value="Sehatik">Sehatik</option><option value="Alshafiya">Alshafiya</option><option value="Rhine">Rhine</option><option value="Ramah">Ramah</option><option value="ALSAD">ALSAD</option></select>
                 <select id="branchFilter" onchange="filterTable()"><option value="">All Branches</option><option value="Asir">Asir</option><option value="Jeddah">Jeddah</option><option value="Almadinah">Almadinah</option><option value="Makkah">Makkah</option><option value="Riyadh">Riyadh</option><option value="Dammam">Dammam</option><option value="Jizan">Jizan</option><option value="Hail">Hail</option><option value="Qassim">Qassim</option></select>
                 <input type="text" id="deviceSerialFilter" placeholder="Device Serial..." onkeyup="filterTable()">
@@ -180,20 +254,45 @@
     </main>
     <div class="modal" id="confirmationModal"><div class="modal-content"><p id="confirmationMessage">Do you want to save the changes?</p><button class="modal-button confirm-button" onclick="confirmEdit()">Confirm</button><button class="modal-button cancel-button" onclick="cancelEdit()">Cancel</button></div></div>
     <div class="modal" id="repairModal"><div class="modal-content"><p>Send to Repair</p><select id="repairReason" required><option value="">Select Reason</option><option value="Screen Cracked">Screen Cracked</option><option value="Battery Failure">Battery Failure</option><option value="Software Issue">Software Issue</option><option value="Hardware Failure">Hardware Failure</option><option value="Other">Other</option></select><button class="modal-button confirm-button" onclick="confirmSendToRepair()">Send</button><button class="modal-button cancel-button" onclick="closeRepairModal()">Cancel</button></div></div>
-    <div class="modal" id="actionModal"><div class="modal-content"><h3>Select Action</h3><select id="actionChoice" required><option value="">Choose an Action</option><option value="edit">Edit</option><option value="remove">Remove</option><option value="comment">Add/Edit Comment</option><option value="removeComment">Remove Comment</option></select><button class="modal-button confirm-button" onclick="executeAction()">Execute</button><button class="modal-button cancel-button" onclick="closeActionModal()">Cancel</button></div></div>
+    <div class="modal" id="actionModal"><div class="modal-content"><h3>Select Action</h3><select id="actionChoice" required><option value="">Choose an Action</option><option value="edit">Edit</option><option value="remove">Remove</option><option value="comment">Add/Edit Comment</option><option value="removeComment">Remove Comment</option><option value="switch">Switch Devices</option></select><button class="modal-button confirm-button" onclick="executeAction()">Execute</button><button class="modal-button cancel-button" onclick="closeActionModal()">Cancel</button></div></div>
     <div id="commentOverlay"></div><div id="commentPopup"><h3>Edit Comment</h3><textarea id="commentText" rows="5" placeholder="Enter your comment here..."></textarea><button class="modal-button confirm-button" onclick="saveComment()">Save Comment</button><button class="modal-button cancel-button" onclick="closeCommentPopup()">Close</button></div>
     <div id="exportPopup" class="modal"><div class="modal-content"><h3>Export Data</h3><select id="exportCompanyFilter"><option value="">All Companies</option><option value="Zulal">Zulal</option><option value="Sehatik">Sehatik</option><option value="Alshafiya">Alshafiya</option><option value="Rhine">Rhine</option><option value="Ramah">Ramah</option><option value="ALSAD">ALSAD</option></select><button class="modal-button confirm-button" onclick="exportToExcel()">Export to Excel</button><button class="modal-button confirm-button" onclick="exportToPDF()">Export to PDF</button><button class="modal-button cancel-button" onclick="closeExportPopup()">Cancel</button></div></div>
     <div id="statsOverlay"></div><div id="statsPopup"><h3>Quick Stats</h3><ul id="statsList"></ul><button class="modal-button cancel-button" onclick="closeStatsPopup()">Close</button></div>
     <div id="reportOverlay"></div><div id="reportPopup"><h3>Generate Report</h3><p>Download a detailed HTML report of all salesmen.</p><button class="modal-button confirm-button" onclick="downloadReport()">Download Report</button><button class="modal-button cancel-button" onclick="closeReportPopup()">Cancel</button></div>
     <div id="auditOverlay"></div><div id="auditPopup"><h3>Audit Log</h3><input type="text" id="auditSearch" placeholder="Search log..." onkeyup="filterAuditLog()"><ul id="auditLogList"></ul><button class="modal-button confirm-button" onclick="downloadAuditLog()">Download Log</button><button class="modal-button cancel-button" onclick="closeAuditPopup()">Close</button></div>
-
+    <div class="modal" id="switchModal">
+        <div class="modal-content">
+            <h3>Switch Devices</h3>
+            <div class="search-container">
+                <input type="text" id="switchSearch" placeholder="Search by SalesBuzz Code..." onkeyup="filterSwitchDropdown()">
+            </div>
+            <select id="targetSalesman" required>
+                <option value="">Select Target Salesman</option>
+            </select>
+            <div class="checkbox-container">
+                <label><input type="checkbox" id="switchDevice" checked> Switch Device</label>
+                <label><input type="checkbox" id="switchPrinter" checked> Switch Printer</label>
+            </div>
+            <button class="modal-button confirm-button" onclick="confirmSwitch()">Switch</button>
+            <button class="modal-button cancel-button" onclick="closeSwitchModal()">Cancel</button>
+        </div>
+    </div>
+    <div id="deviceHistoryOverlay"></div>
+    <div id="deviceHistoryPopup">
+        <h3>Device History</h3>
+        <table>
+            <thead><tr><th>Action</th><th>Salesman</th><th>Date</th></tr></thead>
+            <tbody id="deviceHistoryList"></tbody>
+        </table>
+        <button onclick="closeDeviceHistoryPopup()">Close</button>
+    </div>
     <script>
         const supabase = window.supabase.createClient('https://beyzsnvccmkztgmltaqs.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJleXpzbnZjY21renRnbWx0YXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA0NzQ5MzYsImV4cCI6MjA1NjA1MDkzNn0.SmiXJ68HGuHToOdukpVtae2_HBMqd3rf7E7RIK-JInM');
         let currentUser = localStorage.getItem('seqaUser') || 'Unknown';
         let editingRow = null, currentRow = null, lastDeletedRows = [], auditLog = [], sortColumn = -1, sortDirection = 1;
         let currentPage = 1, rowsPerPage = 10;
         const AUDIT_LOG_LIMIT = 100;
-        let repairItemRow = null, repairItemType = null, actionRow = null;
+        let repairItemRow = null, repairItemType = null, actionRow = null, switchSourceRow = null;
 
         const ELEMENTS = {
             salesmanTableBody: document.getElementById("salesmanTableBody"),
@@ -203,6 +302,7 @@
             commentOverlay: document.getElementById("commentOverlay"),
             exportPopup: document.getElementById("exportPopup"),
             searchInput: document.getElementById("searchInput"),
+            salesBuzzCodeFilter: document.getElementById("salesBuzzCodeFilter"),
             companyFilter: document.getElementById("companyFilter"),
             branchFilter: document.getElementById("branchFilter"),
             deviceSerialFilter: document.getElementById("deviceSerialFilter"),
@@ -227,7 +327,15 @@
             actionModal: document.getElementById("actionModal"),
             actionChoice: document.getElementById("actionChoice"),
             commentText: document.getElementById("commentText"),
-            exportCompanyFilter: document.getElementById("exportCompanyFilter")
+            exportCompanyFilter: document.getElementById("exportCompanyFilter"),
+            switchModal: document.getElementById("switchModal"),
+            targetSalesman: document.getElementById("targetSalesman"),
+            switchDevice: document.getElementById("switchDevice"),
+            switchPrinter: document.getElementById("switchPrinter"),
+            switchSearch: document.getElementById("switchSearch"),
+            deviceHistoryPopup: document.getElementById("deviceHistoryPopup"),
+            deviceHistoryOverlay: document.getElementById("deviceHistoryOverlay"),
+            deviceHistoryList: document.getElementById("deviceHistoryList")
         };
 
         document.addEventListener("DOMContentLoaded", () => {
@@ -236,7 +344,32 @@
             ELEMENTS.rowsPerPage.value = rowsPerPage;
             loadAuditLog();
             document.addEventListener('click', closeMenuOnClickOutside);
+            ELEMENTS.salesmanTableBody.addEventListener('click', handleTableClick);
+            ELEMENTS.salesmanTableBody.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const row = e.target.closest('tr');
+                if (row) showActionModal(row);
+            });
         });
+
+        function handleTableClick(e) {
+            const row = e.target.closest('tr');
+            if (!row) return;
+            const deviceSerial = e.target.classList.contains('device-serial');
+            const printerSerial = e.target.classList.contains('printer-serial');
+            if (deviceSerial || printerSerial) {
+                const serial = deviceSerial ? row.cells[5].textContent : row.cells[7].textContent;
+                const type = deviceSerial ? 'device' : 'printer';
+                if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    showDeviceHistory(serial, type);
+                } else if (serial !== "Sent to Repair") {
+                    showRepairModal(row, type);
+                }
+            } else {
+                toggleRowSelection(row, e);
+            }
+        }
 
         function toggleMenu() { ELEMENTS.headerButtons.classList.toggle("active"); }
 
@@ -293,6 +426,20 @@
             );
         }
 
+        async function logDeviceHistory(serial, deviceType, salesmanId, action, reason = null) {
+            const historyEntry = {
+                serial_number: serial,
+                device_type: deviceType === 'device' ? 'Device' : 'Printer',
+                salesman_id: salesmanId,
+                assigned_date: action === 'Assigned' ? new Date().toLocaleDateString() : null,
+                unassigned_date: action === 'Unassigned' || action === 'Sent to Repair' ? new Date().toLocaleDateString() : null,
+                action: action,
+                reason: reason
+            };
+            const { error } = await supabase.from('device_history').insert(historyEntry);
+            if (error) console.error('Error logging device history:', error.message);
+        }
+
         async function addSalesman() {
             const inputs = {
                 name: document.getElementById("name").value.trim(),
@@ -312,9 +459,11 @@
             };
             if (Object.values(inputs).slice(0, 8).some(val => !val)) return alert("Please fill in all required fields.");
             if (await checkDuplicates(inputs.device_serial, inputs.printer_serial, inputs.salesbuzz_code, inputs.company)) return alert("A salesman with this Device Serial, Printer Serial, or SalesBuzz Code and Company combination already exists.");
-            const { error } = await supabase.from('salesmen').insert(inputs);
+            const { data, error } = await supabase.from('salesmen').insert(inputs).select().single();
             if (error) return alert("Failed to add salesman: " + error.message);
             logAction("Add Salesman", `${inputs.name} (Device Serial: ${inputs.device_serial}, Printer Serial: ${inputs.printer_serial})`);
+            await logDeviceHistory(inputs.device_serial, 'device', data.id, 'Assigned');
+            await logDeviceHistory(inputs.printer_serial, 'printer', data.id, 'Assigned');
             document.querySelectorAll('.form-container input, .form-container select').forEach(el => el.value = el.type === "checkbox" ? (el.checked = false) : "");
             loadSalesmen();
         }
@@ -353,9 +502,13 @@
                     }
                     salesmenToInsert.push(cleanedData);
                 }
-                const { error } = await supabase.from('salesmen').insert(salesmenToInsert);
+                const { data, error } = await supabase.from('salesmen').insert(salesmenToInsert).select();
                 if (error) return alert("Failed to import some salesmen: " + error.message);
-                salesmenToInsert.forEach(s => logAction("Import Salesman", `${s.name} (Device Serial: ${s.device_serial}, Printer Serial: ${s.printer_serial})`));
+                for (const s of data) {
+                    await logDeviceHistory(s.device_serial, 'device', s.id, 'Assigned');
+                    await logDeviceHistory(s.printer_serial, 'printer', s.id, 'Assigned');
+                    logAction("Import Salesman", `${s.name} (Device Serial: ${s.device_serial}, Printer Serial: ${s.printer_serial})`);
+                }
                 if (hasDuplicates) alert("Some entries were skipped due to duplicates.");
                 ELEMENTS.importFile.value = "";
                 loadSalesmen();
@@ -383,6 +536,8 @@
             if (fetchError) return alert("Failed to fetch salesman data: " + fetchError.message);
             const { error } = await supabase.from('salesmen').delete().eq('id', id);
             if (error) return alert("Failed to delete salesman: " + error.message);
+            await logDeviceHistory(salesmanData.device_serial, 'device', id, 'Unassigned');
+            await logDeviceHistory(salesmanData.printer_serial, 'printer', id, 'Unassigned');
             lastDeletedRows = [salesmanData];
             logAction("Remove Salesman", `${row.cells[0].textContent} (Device Serial: ${row.cells[5].textContent}, Printer Serial: ${row.cells[7].textContent})`);
             ELEMENTS.undoButton.disabled = false;
@@ -475,10 +630,12 @@
             const updateField = repairItemType === "device" ? "device_serial" : "printer_serial";
             const { error: updateError } = await supabase.from('salesmen').update({ [updateField]: "Sent to Repair", edited_date: new Date().toLocaleDateString() }).eq('id', id);
             if (updateError) return alert("Failed to update salesman: " + updateError.message);
+            await logDeviceHistory(serial, repairItemType, id, 'Sent to Repair', reason);
             logAction(`Send ${repairItemType === "device" ? "Device" : "Printer"} to Repair`, `${repairItemRow.cells[0].textContent} - ${repairItemType === "device" ? "Device" : "Printer"} Serial: ${serial} (Reason: ${reason})`);
             closeRepairModal();
             const filters = {
                 name: ELEMENTS.searchInput.value,
+                salesbuzzCode: ELEMENTS.salesBuzzCodeFilter.value,
                 company: ELEMENTS.companyFilter.value,
                 branch: ELEMENTS.branchFilter.value,
                 deviceSerial: ELEMENTS.deviceSerialFilter.value,
@@ -486,6 +643,7 @@
             };
             loadSalesmen(() => {
                 ELEMENTS.searchInput.value = filters.name;
+                ELEMENTS.salesBuzzCodeFilter.value = filters.salesbuzzCode;
                 ELEMENTS.companyFilter.value = filters.company;
                 ELEMENTS.branchFilter.value = filters.branch;
                 ELEMENTS.deviceSerialFilter.value = filters.deviceSerial;
@@ -518,6 +676,7 @@
                 case "remove": removeRow(actionRow); break;
                 case "comment": showCommentPopup(actionRow); break;
                 case "removeComment": await removeComment(actionRow); break;
+                case "switch": showSwitchModal(actionRow); break;
             }
             closeActionModal();
         }
@@ -546,6 +705,7 @@
             logAction("Update Comment", `${currentRow.cells[0].textContent} - Comment changed to "${comment}"`);
             const filters = {
                 name: ELEMENTS.searchInput.value,
+                salesbuzzCode: ELEMENTS.salesBuzzCodeFilter.value,
                 company: ELEMENTS.companyFilter.value,
                 branch: ELEMENTS.branchFilter.value,
                 deviceSerial: ELEMENTS.deviceSerialFilter.value,
@@ -554,6 +714,7 @@
             closeCommentPopup();
             loadSalesmen(() => {
                 ELEMENTS.searchInput.value = filters.name;
+                ELEMENTS.salesBuzzCodeFilter.value = filters.salesbuzzCode;
                 ELEMENTS.companyFilter.value = filters.company;
                 ELEMENTS.branchFilter.value = filters.branch;
                 ELEMENTS.deviceSerialFilter.value = filters.deviceSerial;
@@ -571,8 +732,10 @@
         async function undoLastAction() {
             if (!lastDeletedRows.length) return;
             const salesmanData = lastDeletedRows[0];
-            const { error } = await supabase.from('salesmen').insert(salesmanData);
+            const { data, error } = await supabase.from('salesmen').insert(salesmanData).select().single();
             if (error) return alert("Failed to undo delete: " + error.message);
+            await logDeviceHistory(salesmanData.device_serial, 'device', data.id, 'Assigned');
+            await logDeviceHistory(salesmanData.printer_serial, 'printer', data.id, 'Assigned');
             logAction("Undo Remove", `${salesmanData.name} (Device Serial: ${salesmanData.device_serial}, Printer Serial: ${salesmanData.printer_serial})`);
             lastDeletedRows = [];
             ELEMENTS.undoButton.disabled = true;
@@ -613,15 +776,17 @@
         function filterTable() {
             const filters = {
                 name: ELEMENTS.searchInput.value.toLowerCase(),
+                salesbuzzCode: ELEMENTS.salesBuzzCodeFilter.value.toLowerCase(),
                 company: ELEMENTS.companyFilter.value,
                 branch: ELEMENTS.branchFilter.value,
                 deviceSerial: ELEMENTS.deviceSerialFilter.value.toLowerCase(),
                 printerSerial: ELEMENTS.printerSerialFilter.value.toLowerCase()
             };
             Array.from(ELEMENTS.salesmanTableBody.rows).forEach(row => {
-                const [name, , company, branch, , deviceSerial, , printerSerial] = row.cells;
+                const [name, salesbuzzCode, company, branch, , deviceSerial, , printerSerial] = row.cells;
                 row.dataset.visible = (
                     name.textContent.toLowerCase().includes(filters.name) &&
+                    salesbuzzCode.textContent.toLowerCase().includes(filters.salesbuzzCode) &&
                     (!filters.company || company.textContent === filters.company) &&
                     (!filters.branch || branch.textContent === filters.branch) &&
                     deviceSerial.textContent.toLowerCase().includes(filters.deviceSerial) &&
@@ -686,7 +851,6 @@
             if (companyFilter) query = query.eq('company', companyFilter);
             const { data, error } = await query;
             if (error) return alert("Failed to fetch salesmen for export: " + error.message);
-
             const tempTable = document.createElement('table');
             tempTable.innerHTML = `
                 <thead><tr><th>Name</th><th>SalesBuzz Code</th><th>Company</th><th>Branch</th><th>Device Type</th><th>Device Serial</th><th>Printer Type</th><th>Printer Serial</th><th>Verified</th><th>SOTI</th><th>SalesBuzz</th><th>Added Date</th><th>Edited Date</th><th>Comments</th></tr></thead>
@@ -703,7 +867,6 @@
             if (companyFilter) query = query.eq('company', companyFilter);
             const { data, error } = await query;
             if (error) return alert("Failed to fetch salesmen for export: " + error.message);
-
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('l', 'pt', 'a4');
             pdf.text(`Salesmen Data${companyFilter ? ` - ${companyFilter}` : ''}`, 40, 40);
@@ -735,8 +898,7 @@
                 <li>Verified: ${stats.verified} (${stats.total ? (stats.verified / stats.total * 100).toFixed(1) : 0}%)</li>
                 <li>SOTI: ${stats.soti} (${stats.total ? (stats.soti / stats.total * 100).toFixed(1) : 0}%)</li>
                 <li>SalesBuzz: ${stats.salesBuzz} (${stats.total ? (stats.salesBuzz / stats.total * 100).toFixed(1) : 0}%)</li>
-                <li>Company Breakdown:</li>
-                ${Object.entries(stats.companies).map(([c, n]) => `<li style="padding-left: 15px;">- ${c}: ${n} (${stats.total ? (n / stats.total * 100).toFixed(1) : 0}%)</li>`).join('')}
+                ${Object.entries(stats.companies).map(([company, count]) => `<li>${company}: ${count} (${stats.total ? (count / stats.total * 100).toFixed(1) : 0}%)</li>`).join('')}
             `;
             ELEMENTS.statsPopup.style.display = 'block';
             ELEMENTS.statsOverlay.style.display = 'block';
@@ -747,66 +909,49 @@
             ELEMENTS.statsOverlay.style.display = 'none';
         }
 
-        ELEMENTS.statsOverlay.onclick = closeStatsPopup;
-
         function generateReport() {
             ELEMENTS.reportPopup.style.display = 'block';
             ELEMENTS.reportOverlay.style.display = 'block';
         }
 
-        function closeReportPopup() {
-            ELEMENTS.reportPopup.style.display = 'none';
-            ELEMENTS.reportOverlay.style.display = 'none';
-        }
-
-        ELEMENTS.reportOverlay.onclick = closeReportPopup;
-
-        function downloadReport() {
-            const rows = Array.from(ELEMENTS.salesmanTableBody.rows).filter(row => row.style.display !== "none");
-            const reportHTML = `
+        async function downloadReport() {
+            const { data, error } = await supabase.from('salesmen').select('*');
+            if (error) return alert("Failed to generate report: " + error.message);
+            const reportContent = `
                 <!DOCTYPE html>
                 <html lang="en">
                 <head>
                     <meta charset="UTF-8">
-                    <title>Seqa Salesmen Report - ${new Date().toLocaleDateString()}</title>
+                    <title>Salesmen Report</title>
                     <style>
-                        body { font-family: 'Roboto', sans-serif; margin: 0; padding: 20px; background: #f5f7fa; color: #2d3748; }
-                        header { text-align: center; padding: 20px; background: #2c6e9b; color: #fff; border-radius: 10px 10px 0 0; }
-                        header img { width: 100px; }
-                        h1 { font-size: 24px; margin: 10px 0; }
-                        .report-container { background: #fff; border: 1px solid #d1d5db; border-radius: 0 0 10px 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        h1 { text-align: center; color: #1e3a5f; }
                         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                        th, td { padding: 8px; border: 1px solid #d1d5db; text-align: center; font-size: 14px; }
-                        th { background: #3498db; color: #fff; text-transform: uppercase; }
-                        tr:nth-child(even) { background: #f1f5f9; }
-                        footer { text-align: center; margin-top: 20px; font-size: 12px; color: #718096; }
+                        th, td { border: 1px solid #d1d5db; padding: 8px; text-align: center; }
+                        th { background: #2c6e9b; color: white; }
+                        tr:nth-child(even) { background: #f5f7fa; }
                     </style>
                 </head>
                 <body>
-                    <header>
-                        <img src="https://static.wixstatic.com/media/fdd745_d266b548f51c43cd8532994122bf4db6~mv2.png/v1/crop/x_0,y_0,w_1006,h_640/fill/w_121,h_77,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/seqa-lo.png" alt="Seqa Logo">
-                        <h1>Seqa Salesmen Report</h1>
-                        <p>Generated on ${new Date().toLocaleString()}</p>
-                    </header>
-                    <div class="report-container">
-                        <table>
-                            <thead>
-                                <tr><th>Name</th><th>SalesBuzz Code</th><th>Company</th><th>Branch</th><th>Device Type</th><th>Device Serial</th><th>Printer Type</th><th>Printer Serial</th><th>Verified</th><th>SOTI</th><th>SalesBuzz</th><th>Added Date</th><th>Edited Date</th><th>Comments</th></tr>
-                            </thead>
-                            <tbody>
-                                ${rows.map(row => `<tr>${Array.from(row.cells).map(cell => `<td>${cell.querySelector('.status-checkbox') ? (cell.querySelector('.status-checkbox').checked ? 'Yes' : 'No') : cell.textContent}</td>`).join('')}</tr>`).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                    <footer><p>© ${new Date().getFullYear()} Seqa. All rights reserved.</p></footer>
+                    <h1>Salesmen Report - ${new Date().toLocaleDateString()}</h1>
+                    <table>
+                        <thead><tr><th>Name</th><th>SalesBuzz Code</th><th>Company</th><th>Branch</th><th>Device Type</th><th>Device Serial</th><th>Printer Type</th><th>Printer Serial</th><th>Verified</th><th>SOTI</th><th>SalesBuzz</th><th>Added Date</th><th>Edited Date</th><th>Comments</th></tr></thead>
+                        <tbody>${data.map(s => `<tr><td>${s.name}</td><td>${s.salesbuzz_code}</td><td>${s.company}</td><td>${s.branch}</td><td>${s.device_type}</td><td>${s.device_serial}</td><td>${s.printer_type}</td><td>${s.printer_serial}</td><td>${s.verified ? 'Yes' : 'No'}</td><td>${s.soti ? 'Yes' : 'No'}</td><td>${s.salesbuzz ? 'Yes' : 'No'}</td><td>${s.added_date}</td><td>${s.edited_date || 'N/A'}</td><td>${s.comments || ''}</td></tr>`).join('')}</tbody>
+                    </table>
                 </body>
                 </html>
             `;
+            const blob = new Blob([reportContent], { type: 'text/html' });
             const link = document.createElement('a');
-            link.href = URL.createObjectURL(new Blob([reportHTML], { type: 'text/html' }));
-            link.download = `Seqa_Salesmen_Report_${new Date().toISOString().slice(0, 10)}.html`;
+            link.href = URL.createObjectURL(blob);
+            link.download = 'Salesmen_Report.html';
             link.click();
             closeReportPopup();
+        }
+
+        function closeReportPopup() {
+            ELEMENTS.reportPopup.style.display = 'none';
+            ELEMENTS.reportOverlay.style.display = 'none';
         }
 
         function showAuditLog() {
@@ -816,8 +961,13 @@
         }
 
         function filterAuditLog() {
-            const searchTerm = ELEMENTS.auditSearch.value.toLowerCase();
-            ELEMENTS.auditLogList.innerHTML = auditLog.filter(entry => `${entry.timestamp} ${entry.username} ${entry.action} ${entry.details}`.toLowerCase().includes(searchTerm)).map(entry => `
+            const search = ELEMENTS.auditSearch.value.toLowerCase();
+            ELEMENTS.auditLogList.innerHTML = auditLog.filter(entry => 
+                entry.timestamp.toLowerCase().includes(search) || 
+                entry.username.toLowerCase().includes(search) || 
+                entry.action.toLowerCase().includes(search) || 
+                entry.details.toLowerCase().includes(search)
+            ).map(entry => `
                 <li class="audit-entry">
                     <span class="audit-timestamp">${entry.timestamp}</span>
                     <span class="audit-user">[${entry.username}]</span>
@@ -830,49 +980,24 @@
         function closeAuditPopup() {
             ELEMENTS.auditPopup.style.display = 'none';
             ELEMENTS.auditOverlay.style.display = 'none';
+            ELEMENTS.auditSearch.value = '';
+            updateAuditLogDisplay();
         }
 
-        ELEMENTS.auditOverlay.onclick = closeAuditPopup;
-
-        function downloadAuditLog() {
-            const logText = auditLog.map(entry => `${entry.timestamp} [${entry.username}] ${entry.action}: ${entry.details}`).join('\n');
+        async function downloadAuditLog() {
+            const { data, error } = await supabase.from('audit_log').select('*').order('timestamp', { ascending: false });
+            if (error) return alert("Failed to download audit log: " + error.message);
+            const csvContent = "Timestamp,Username,Action,Details\n" + data.map(e => `${e.timestamp},${e.username},${e.action},${e.details}`).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
             const link = document.createElement('a');
-            link.href = URL.createObjectURL(new Blob([logText], { type: 'text/plain' }));
-            link.download = `Seqa_Audit_Log_${new Date().toISOString().slice(0, 10)}.txt`;
+            link.href = URL.createObjectURL(blob);
+            link.download = 'Audit_Log.csv';
             link.click();
-            closeAuditPopup();
-        }
-
-        function exportSelectedToExcel() {
-            const selectedRows = Array.from(document.querySelectorAll('tr.selected'));
-            if (!selectedRows.length) return alert("No salesmen selected.");
-            const tempTable = document.createElement('table');
-            tempTable.innerHTML = `<thead>${document.querySelector('#salesmanTable thead').innerHTML}</thead><tbody>${selectedRows.map(row => `<tr>${row.innerHTML}</tr>`).join('')}</tbody>`;
-            const workbook = XLSX.utils.table_to_book(tempTable, { sheet: "Selected Salesmen" });
-            XLSX.writeFile(workbook, "Selected_SalesmenData.xlsx");
-        }
-
-        async function bulkDelete() {
-            const selectedRows = Array.from(document.querySelectorAll('tr.selected'));
-            if (!selectedRows.length) return alert("No salesmen selected.");
-            if (!confirm(`Are you sure you want to delete ${selectedRows.length} salesmen?`)) return;
-            const ids = selectedRows.map(row => row.dataset.id);
-            const { data: deletedData, error: fetchError } = await supabase.from('salesmen').select('*').in('id', ids);
-            if (fetchError) return alert("Failed to fetch salesmen data: " + fetchError.message);
-            const { error } = await supabase.from('salesmen').delete().in('id', ids);
-            if (error) return alert("Failed to delete salesmen: " + error.message);
-            lastDeletedRows = deletedData;
-            selectedRows.forEach(row => logAction("Bulk Delete Salesman", `${row.cells[0].textContent} (Device Serial: ${row.cells[5].textContent}, Printer Serial: ${row.cells[7].textContent})`));
-            ELEMENTS.undoButton.disabled = false;
-            loadSalesmen();
         }
 
         async function loadSalesmen(callback) {
-            const { data, error } = await supabase.from('salesmen').select('*');
-            if (error) {
-                console.error('Error loading salesmen:', error.message);
-                return alert("Failed to load salesmen: " + error.message);
-            }
+            const { data, error } = await supabase.from('salesmen').select('*').order('id', { ascending: true });
+            if (error) return alert("Failed to load salesmen: " + error.message);
             ELEMENTS.salesmanTableBody.innerHTML = data.map(s => `
                 <tr data-id="${s.id}" data-visible="true">
                     <td>${s.name}</td>
@@ -880,37 +1005,177 @@
                     <td>${s.company}</td>
                     <td>${s.branch}</td>
                     <td>${s.device_type}</td>
-                    <td><span class="device-serial">${s.device_serial}</span></td>
+                    <td class="device-serial" ${s.device_serial === "Sent to Repair" ? 'data-status="repair"' : ''}>${s.device_serial}</td>
                     <td>${s.printer_type}</td>
-                    <td><span class="printer-serial">${s.printer_serial}</span></td>
+                    <td class="printer-serial" ${s.printer_serial === "Sent to Repair" ? 'data-status="repair"' : ''}>${s.printer_serial}</td>
                     <td><input type="checkbox" class="status-checkbox" ${s.verified ? "checked" : ""} onchange="toggleStatus(this, 8)"></td>
                     <td><input type="checkbox" class="status-checkbox" ${s.soti ? "checked" : ""} onchange="toggleStatus(this, 9)"></td>
                     <td><input type="checkbox" class="status-checkbox" ${s.salesbuzz ? "checked" : ""} onchange="toggleStatus(this, 10)"></td>
                     <td>${s.added_date}</td>
-                    <td>${s.edited_date || "N/A"}</td>
-                    <td>${s.comments || ""}</td>
+                    <td>${s.edited_date || 'N/A'}</td>
+                    <td>${s.comments || ''}</td>
                 </tr>
             `).join('');
-            filterTable();
             updatePagination();
             if (callback) callback();
         }
 
-        ELEMENTS.salesmanTableBody.addEventListener('click', e => {
-            const row = e.target.closest('tr');
-            if (!row) return;
-            if (e.target.classList.contains('status-checkbox')) return;
-            if (e.target.classList.contains('device-serial')) showRepairModal(row, 'device');
-            else if (e.target.classList.contains('printer-serial')) showRepairModal(row, 'printer');
-            else toggleRowSelection(row, e);
-        });
+        async function bulkDelete() {
+            const selectedRows = document.querySelectorAll('tr.selected');
+            if (!selectedRows.length) return alert("No rows selected for deletion.");
+            if (!confirm(`Are you sure you want to delete ${selectedRows.length} salesman/salesmen?`)) return;
+            const ids = Array.from(selectedRows).map(row => row.dataset.id);
+            const { data: deletedData, error: fetchError } = await supabase.from('salesmen').select('*').in('id', ids);
+            if (fetchError) return alert("Failed to fetch salesmen data: " + fetchError.message);
+            const { error } = await supabase.from('salesmen').delete().in('id', ids);
+            if (error) return alert("Failed to delete salesmen: " + error.message);
+            for (const s of deletedData) {
+                await logDeviceHistory(s.device_serial, 'device', s.id, 'Unassigned');
+                await logDeviceHistory(s.printer_serial, 'printer', s.id, 'Unassigned');
+                logAction("Bulk Remove Salesman", `${s.name} (Device Serial: ${s.device_serial}, Printer Serial: ${s.printer_serial})`);
+            }
+            lastDeletedRows = deletedData;
+            ELEMENTS.undoButton.disabled = false;
+            loadSalesmen();
+        }
 
-        ELEMENTS.salesmanTableBody.addEventListener('dblclick', e => {
-            const row = e.target.closest('tr');
-            if (row && !e.target.classList.contains('device-serial') && !e.target.classList.contains('printer-serial')) showActionModal(row);
-        });
+        async function exportSelectedToExcel() {
+            const selectedRows = document.querySelectorAll('tr.selected');
+            if (!selectedRows.length) return alert("No rows selected for export.");
+            const ids = Array.from(selectedRows).map(row => row.dataset.id);
+            const { data, error } = await supabase.from('salesmen').select('*').in('id', ids);
+            if (error) return alert("Failed to fetch selected salesmen: " + error.message);
+            const tempTable = document.createElement('table');
+            tempTable.innerHTML = `
+                <thead><tr><th>Name</th><th>SalesBuzz Code</th><th>Company</th><th>Branch</th><th>Device Type</th><th>Device Serial</th><th>Printer Type</th><th>Printer Serial</th><th>Verified</th><th>SOTI</th><th>SalesBuzz</th><th>Added Date</th><th>Edited Date</th><th>Comments</th></tr></thead>
+                <tbody>${data.map(s => `<tr><td>${s.name}</td><td>${s.salesbuzz_code}</td><td>${s.company}</td><td>${s.branch}</td><td>${s.device_type}</td><td>${s.device_serial}</td><td>${s.printer_type}</td><td>${s.printer_serial}</td><td>${s.verified ? 'Yes' : 'No'}</td><td>${s.soti ? 'Yes' : 'No'}</td><td>${s.salesbuzz ? 'Yes' : 'No'}</td><td>${s.added_date}</td><td>${s.edited_date || 'N/A'}</td><td>${s.comments || ''}</td></tr>`).join('')}</tbody>
+            `;
+            const workbook = XLSX.utils.table_to_book(tempTable, { sheet: "Selected Salesmen" });
+            XLSX.writeFile(workbook, 'Selected_Salesmen.xlsx');
+        }
 
-        ELEMENTS.commentOverlay.onclick = closeCommentPopup;
+        async function showSwitchModal(row) {
+            switchSourceRow = row;
+            ELEMENTS.switchModal.classList.add('active');
+            ELEMENTS.targetSalesman.innerHTML = '<option value="">Select Target Salesman</option>';
+            ELEMENTS.switchSearch.value = '';
+            ELEMENTS.switchDevice.checked = true;
+            ELEMENTS.switchPrinter.checked = true;
+            const { data, error } = await supabase.from('salesmen').select('id, name, salesbuzz_code').neq('id', row.dataset.id);
+            if (error) return alert("Failed to load salesmen for switching: " + error.message);
+            data.forEach(s => {
+                const option = document.createElement('option');
+                option.value = s.id;
+                option.textContent = `${s.name} (${s.salesbuzz_code})`;
+                ELEMENTS.targetSalesman.appendChild(option);
+            });
+            setTimeout(() => ELEMENTS.switchModal.querySelector('.modal-content').classList.add('active'), 10);
+        }
+
+        function closeSwitchModal() {
+            ELEMENTS.switchModal.querySelector('.modal-content').classList.remove('active');
+            setTimeout(() => {
+                ELEMENTS.switchModal.classList.remove('active');
+                switchSourceRow = null;
+            }, 200);
+        }
+
+        function filterSwitchDropdown() {
+            const search = ELEMENTS.switchSearch.value.toLowerCase();
+            Array.from(ELEMENTS.targetSalesman.options).forEach(option => {
+                if (option.value === "") return;
+                option.style.display = option.textContent.toLowerCase().includes(search) ? '' : 'none';
+            });
+        }
+
+        async function confirmSwitch() {
+            if (!switchSourceRow) return;
+            const targetId = ELEMENTS.targetSalesman.value;
+            if (!targetId) return alert("Please select a target salesman.");
+            const sourceId = switchSourceRow.dataset.id;
+            const switchDevice = ELEMENTS.switchDevice.checked;
+            const switchPrinter = ELEMENTS.switchPrinter.checked;
+            if (!switchDevice && !switchPrinter) return alert("Please select at least one item to switch.");
+            const { data: [sourceData, targetData], error } = await supabase.from('salesmen').select('*').in('id', [sourceId, targetId]);
+            if (error) return alert("Failed to fetch salesman data for switch: " + error.message);
+
+            const updates = {};
+            if (switchDevice) {
+                updates[sourceId] = { device_serial: targetData.device_serial, edited_date: new Date().toLocaleDateString() };
+                updates[targetId] = { device_serial: sourceData.device_serial, edited_date: new Date().toLocaleDateString() };
+            }
+            if (switchPrinter) {
+                updates[sourceId] = { ...updates[sourceId], printer_serial: targetData.printer_serial, edited_date: new Date().toLocaleDateString() };
+                updates[targetId] = { ...updates[targetId], printer_serial: sourceData.printer_serial, edited_date: new Date().toLocaleDateString() };
+            }
+
+            for (const [id, updateData] of Object.entries(updates)) {
+                const { error: updateError } = await supabase.from('salesmen').update(updateData).eq('id', id);
+                if (updateError) return alert("Failed to switch devices: " + updateError.message);
+            }
+
+            if (switchDevice) {
+                await logDeviceHistory(sourceData.device_serial, 'device', targetId, 'Assigned');
+                await logDeviceHistory(targetData.device_serial, 'device', sourceId, 'Assigned');
+                await logDeviceHistory(sourceData.device_serial, 'device', sourceId, 'Unassigned');
+                await logDeviceHistory(targetData.device_serial, 'device', targetId, 'Unassigned');
+            }
+            if (switchPrinter) {
+                await logDeviceHistory(sourceData.printer_serial, 'printer', targetId, 'Assigned');
+                await logDeviceHistory(targetData.printer_serial, 'printer', sourceId, 'Assigned');
+                await logDeviceHistory(sourceData.printer_serial, 'printer', sourceId, 'Unassigned');
+                await logDeviceHistory(targetData.printer_serial, 'printer', targetId, 'Unassigned');
+            }
+
+            logAction("Switch Devices", `${sourceData.name} (${sourceData.salesbuzz_code}) and ${targetData.name} (${targetData.salesbuzz_code}) - ${switchDevice ? 'Device' : ''}${switchDevice && switchPrinter ? ' and ' : ''}${switchPrinter ? 'Printer' : ''}`);
+
+            closeSwitchModal();
+            loadSalesmen();
+        }
+
+        async function showDeviceHistory(serial, type) {
+            const { data: historyData, error: historyError } = await supabase
+                .from('device_history')
+                .select('serial_number, device_type, salesman_id, assigned_date, unassigned_date, action, reason')
+                .eq('serial_number', serial)
+                .order('id', { ascending: false });
+            if (historyError) {
+                console.error('Error fetching device history:', historyError.message);
+                return alert("Failed to load device history: " + historyError.message);
+            }
+
+            const historyWithNames = await Promise.all(historyData.map(async entry => {
+                if (!entry.salesman_id) return { ...entry, salesman_name: 'N/A' };
+                const { data: salesmanData, error: salesmanError } = await supabase
+                    .from('salesmen')
+                    .select('name')
+                    .eq('id', entry.salesman_id)
+                    .single();
+                return {
+                    ...entry,
+                    salesman_name: salesmanError || !salesmanData ? 'N/A' : salesmanData.name
+                };
+            }));
+
+            ELEMENTS.deviceHistoryList.innerHTML = historyWithNames.length > 0
+                ? historyWithNames.map(entry => `
+                    <tr>
+                        <td>${entry.action}</td>
+                        <td>${entry.salesman_name}</td>
+                        <td>${entry.assigned_date || entry.unassigned_date || 'N/A'}${entry.reason ? ` (${entry.reason})` : ''}</td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="3" style="text-align: center;">No history available</td></tr>';
+
+            ELEMENTS.deviceHistoryPopup.querySelector('h3').textContent = `${type === 'device' ? 'Device' : 'Printer'} History - ${serial}`;
+            ELEMENTS.deviceHistoryPopup.style.display = 'block';
+            ELEMENTS.deviceHistoryOverlay.style.display = 'block';
+        }
+
+        function closeDeviceHistoryPopup() {
+            ELEMENTS.deviceHistoryPopup.style.display = 'none';
+            ELEMENTS.deviceHistoryOverlay.style.display = 'none';
+        }
     </script>
 </body>
 </html>

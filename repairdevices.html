@@ -370,7 +370,9 @@
                         <option value="Completed">Completed</option>
                     </select>
                 </label>
-                <label>Received Date: <input type="text" id="receivedDate" placeholder="MM/DD/YYYY" required></label>
+                <label>Received Date: 
+                    <input type="text" id="receivedDate" placeholder="MM/DD/YYYY" maxlength="10" oninput="formatDate(this)" required>
+                </label>
                 <button onclick="addDevice()">Add Item</button>
             </div>
 
@@ -485,21 +487,79 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             currentUser = localStorage.getItem('seqaUser') || 'Unknown';
-            auditLog = JSON.parse(localStorage.getItem('repairDevicesAuditLog')) || [];
             if (localStorage.getItem('seqaSession') !== 'loggedIn') {
                 window.location.href = 'index.html';
             } else {
                 loadDevices();
+                loadAuditLog();
             }
         });
 
-        const logAction = (action, details) => {
+        async function logAction(action, details) {
             const timestamp = new Date().toLocaleString();
-            const user = currentUser;
-            auditLog.push({ timestamp, user, action, details });
-            if (auditLog.length > AUDIT_LOG_LIMIT) auditLog = auditLog.slice(-AUDIT_LOG_LIMIT);
-            localStorage.setItem('repairDevicesAuditLog', JSON.stringify(auditLog));
-        };
+            const entry = { timestamp, username: currentUser, action, details };
+            const { error } = await supabase.from('repair_audit_log').insert(entry);
+            if (error) {
+                console.error('Error logging action:', error.message);
+            } else {
+                auditLog.unshift(entry);
+                if (auditLog.length > AUDIT_LOG_LIMIT) auditLog.pop();
+                updateAuditLogDisplay();
+            }
+        }
+
+        async function loadAuditLog() {
+            const { data, error } = await supabase.from('repair_audit_log')
+                .select('*')
+                .order('timestamp', { ascending: false })
+                .limit(AUDIT_LOG_LIMIT);
+            if (error) {
+                console.error('Error loading audit log:', error.message);
+            } else {
+                auditLog = data;
+                updateAuditLogDisplay();
+            }
+        }
+
+        function updateAuditLogDisplay() {
+            ELEMENTS.auditLogList.innerHTML = auditLog.map(entry => `
+                <li class="audit-entry">
+                    <span class="audit-timestamp">${entry.timestamp}</span>
+                    <span class="audit-user">[${entry.username}]</span>
+                    <span class="audit-action ${entry.action.toLowerCase().split(' ')[0]}">${entry.action}</span>
+                    <span class="audit-details">${entry.details}</span>
+                </li>
+            `).join('');
+        }
+
+        function formatDate(input) {
+            let value = input.value.replace(/\D/g, ''); // Remove non-digits
+            if (value.length === 6) { // e.g., "882000" (MMDDYY)
+                const month = value.slice(0, 2);
+                const day = value.slice(2, 4);
+                const year = `20${value.slice(4, 6)}`; // Assume 2000s
+                if (month > 0 && month <= 12 && day > 0 && day <= 31) {
+                    input.value = `${month.padStart(2, '0')}/${day.padStart(2, '0')}/${year}`;
+                }
+            } else if (value.length === 8) { // e.g., "08082000" (MMDDYYYY)
+                const month = value.slice(0, 2);
+                const day = value.slice(2, 4);
+                const year = value.slice(4, 8);
+                if (month > 0 && month <= 12 && day > 0 && day <= 31) {
+                    input.value = `${month}/${day}/${year}`;
+                }
+            } else if (value.length > 0 && value.length < 6) {
+                input.value = value; // Partial input
+            }
+        }
+
+        document.getElementById("receivedDate").addEventListener("blur", function() {
+            const value = this.value;
+            if (value && !/^\d{2}\/\d{2}\/\d{4}$/.test(value)) {
+                this.value = "";
+                alert("Please enter a valid date in MM/DD/YYYY format (e.g., 08/08/2000).");
+            }
+        });
 
         const loadDevices = async () => {
             const { data, error } = await supabase.from('repair_devices').select('*');
@@ -561,6 +621,11 @@
                 return;
             }
 
+            if (!/^\d{2}\/\d{2}\/\d{4}$/.test(inputs.received_date)) {
+                alert("Invalid date format. Use MM/DD/YYYY (e.g., 08/08/2000).");
+                return;
+            }
+
             const { error } = await supabase.from('repair_devices').insert(inputs);
             if (error) {
                 console.error('Error adding item:', error.message);
@@ -568,7 +633,7 @@
                 return;
             }
 
-            logAction(`Add ${itemType === "device" ? "Device" : "Printer"}`, `Serial: ${inputs.serial_number} (Issue: ${inputs.issue})`);
+            await logAction(`Add ${itemType === "device" ? "Device" : "Printer"}`, `Serial: ${inputs.serial_number} (Issue: ${inputs.issue})`);
             document.getElementById("itemType").value = "";
             document.getElementById("deviceType").value = "";
             document.getElementById("serialNumber").value = "";
@@ -612,9 +677,9 @@
                     return;
                 }
 
-                logAction(`${itemType === "device" ? "Device" : "Printer"} Repair Completed`, `Serial: ${serialNumber} returned to Salesman ID: ${salesmanId}`);
+                await logAction(`${itemType === "device" ? "Device" : "Printer"} Repair Completed`, `Serial: ${serialNumber} returned to Salesman ID: ${salesmanId}`);
             } else {
-                logAction("Update Status", `Serial: ${serialNumber} - Status to ${newStatus}`);
+                await logAction("Update Status", `Serial: ${serialNumber} - Status to ${newStatus}`);
             }
 
             loadDevices();
@@ -623,6 +688,10 @@
         const updateRepairDate = async (id, itemType) => {
             const repairDate = prompt("Enter repair date (MM/DD/YYYY):", new Date().toLocaleDateString());
             if (repairDate) {
+                if (!/^\d{2}\/\d{2}\/\d{4}$/.test(repairDate)) {
+                    alert("Invalid date format. Use MM/DD/YYYY (e.g., 08/08/2000).");
+                    return;
+                }
                 const { error } = await supabase.from('repair_devices').update({ repair_date: repairDate, status: 'Completed' }).eq('id', id);
                 if (error) {
                     console.error('Error updating repair date:', error.message);
@@ -649,9 +718,9 @@
                         return;
                     }
 
-                    logAction(`${itemType === "device" ? "Device" : "Printer"} Repair Completed`, `Serial: ${device.serial_number} returned to Salesman ID: ${device.salesman_id}`);
+                    await logAction(`${itemType === "device" ? "Device" : "Printer"} Repair Completed`, `Serial: ${device.serial_number} returned to Salesman ID: ${device.salesman_id}`);
                 } else {
-                    logAction("Update Repair Date", `Serial: ${device.serial_number} - Repair Date set to ${repairDate}`);
+                    await logAction("Update Repair Date", `Serial: ${device.serial_number} - Repair Date set to ${repairDate}`);
                 }
                 loadDevices();
             }
@@ -684,7 +753,7 @@
             }
 
             const itemType = device.device_type ? "Device" : "Printer";
-            logAction(`Delete ${itemType}`, `Serial: ${device.serial_number}`);
+            await logAction(`Delete ${itemType}`, `Serial: ${device.serial_number}`);
             closeModal('confirmationModal');
             loadDevices();
         };
@@ -713,25 +782,18 @@
         };
 
         const showAuditModal = () => {
-            ELEMENTS.auditLogList.innerHTML = auditLog.map(entry => `
-                <li class="audit-entry">
-                    <span class="audit-timestamp">${entry.timestamp}</span>
-                    <span class="audit-user">[${entry.user}]</span>
-                    <span class="audit-action ${entry.action.toLowerCase().split(' ')[0]}">${entry.action}</span>
-                    <span class="audit-details">${entry.details}</span>
-                </li>
-            `).join('');
+            updateAuditLogDisplay();
             ELEMENTS.auditModal.style.display = "flex";
         };
 
         const filterAuditLog = () => {
             const searchTerm = ELEMENTS.auditSearch.value.toLowerCase();
             ELEMENTS.auditLogList.innerHTML = auditLog
-                .filter(entry => `${entry.timestamp} ${entry.user} ${entry.action} ${entry.details}`.toLowerCase().includes(searchTerm))
+                .filter(entry => `${entry.timestamp} ${entry.username} ${entry.action} ${entry.details}`.toLowerCase().includes(searchTerm))
                 .map(entry => `
                     <li class="audit-entry">
                         <span class="audit-timestamp">${entry.timestamp}</span>
-                        <span class="audit-user">[${entry.user}]</span>
+                        <span class="audit-user">[${entry.username}]</span>
                         <span class="audit-action ${entry.action.toLowerCase().split(' ')[0]}">${entry.action}</span>
                         <span class="audit-details">${entry.details}</span>
                     </li>
@@ -739,7 +801,7 @@
         };
 
         const downloadAuditLog = () => {
-            const logText = auditLog.map(entry => `${entry.timestamp} [${entry.user}] ${entry.action}: ${entry.details}`).join('\n');
+            const logText = auditLog.map(entry => `${entry.timestamp} [${entry.username}] ${entry.action}: ${entry.details}`).join('\n');
             const blob = new Blob([logText], { type: 'text/plain' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);

@@ -26,6 +26,10 @@
             --chat-bg: #f9fafb;
             --chat-user: #4a90e2;
             --chat-assistant: #e9ecef;
+            --audit-add: #28a745;
+            --audit-edit: #007bff;
+            --audit-remove: #dc3545;
+            --audit-toggle: #ffc107;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -457,6 +461,40 @@
             color: var(--secondary);
         }
 
+        .activity-feed {
+            background: var(--white);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 20px;
+            text-align: center;
+        }
+        .activity-feed h3 {
+            font-size: 18px;
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        #activityList {
+            list-style: none;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 0;
+            text-align: left;
+            font-size: 12px;
+        }
+        #activityList li {
+            padding: 5px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        #activityList .timestamp { font-weight: bold; }
+        #activityList .user { color: #6c757d; }
+        #activityList .action-add { color: var(--audit-add); }
+        #activityList .action-edit { color: var(--audit-edit); }
+        #activityList .action-remove { color: var(--audit-remove); }
+        #activityList .action-update { color: var(--audit-toggle); }
+        #activityList .action-delete { color: var(--audit-remove); }
+        #activityList .action-toggle { color: var(--audit-toggle); }
+
         .modal {
             display: none;
             position: fixed;
@@ -728,6 +766,10 @@
                 <p>Total Salesmen: <span class="stat-value" id="totalSalesmen">0</span></p>
                 <p>Total Devices in Repair: <span class="stat-value" id="totalRepair">0</span></p>
             </div>
+            <div class="activity-feed">
+                <h3>Latest Activity</h3>
+                <ul id="activityList"></ul>
+            </div>
         </div>
     </div>
 
@@ -784,7 +826,8 @@
             fullscreenChartCanvas: document.getElementById("fullscreenChartCanvas"),
             assistantContainer: document.getElementById("assistantContainer"),
             assistantChat: document.getElementById("assistantChat"),
-            assistantInput: document.getElementById("assistantInput")
+            assistantInput: document.getElementById("assistantInput"),
+            activityList: document.getElementById("activityList")
         };
 
         let currentUser = null;
@@ -792,6 +835,7 @@
         let chartData = {};
         let fullscreenChart = null;
         let isCompanyBranchView = true;
+        let activityLog = [];
 
         function showLogin() {
             ELEMENTS.loginModal.classList.add("active");
@@ -808,6 +852,7 @@
             ELEMENTS.sidebarContainer.style.display = "block";
             ELEMENTS.mainContent.style.display = "block";
             loadDashboardData();
+            setupRealtimeSubscriptions();
         }
 
         function toggleSidebar() {
@@ -869,6 +914,7 @@
             Object.values(charts).forEach(chart => chart.destroy());
             charts = {};
             if (fullscreenChart) fullscreenChart.destroy();
+            supabase.removeAllChannels();
             showLogin();
         }
 
@@ -1308,15 +1354,13 @@
             try {
                 const { data: salesmenData, error: salesmenError } = await supabase.from('salesmen').select('company, branch, device_type, printer_type, verified, soti, salesbuzz');
                 const { data: repairData, error: repairError } = await supabase.from('repair_devices').select('company, branch, status, device_type, printer_type, received_date, repair_date');
+                const { data: salesmenAuditData, error: salesmenAuditError } = await supabase.from('audit_log').select('*').order('timestamp', { ascending: false }).limit(5);
+                const { data: repairAuditData, error: repairAuditError } = await supabase.from('repair_audit_log').select('*').order('timestamp', { ascending: false }).limit(5);
 
-                if (salesmenError) {
-                    console.error('Error fetching salesmen:', salesmenError.message);
-                    return;
-                }
-                if (repairError) {
-                    console.error('Error fetching repair devices:', repairError.message);
-                    return;
-                }
+                if (salesmenError) throw new Error('Error fetching salesmen: ' + salesmenError.message);
+                if (repairError) throw new Error('Error fetching repair devices: ' + repairError.message);
+                if (salesmenAuditError) throw new Error('Error fetching salesmen audit: ' + salesmenAuditError.message);
+                if (repairAuditError) throw new Error('Error fetching repair audit: ' + repairAuditError.message);
 
                 const fetchedSalesmen = salesmenData || [];
                 const repairDevices = repairData || [];
@@ -1361,6 +1405,11 @@
                 ELEMENTS.totalSalesmen.textContent = chartData.totalSalesmen;
                 ELEMENTS.totalRepair.textContent = chartData.totalActiveRepair;
 
+                activityLog = [...salesmenAuditData, ...repairAuditData]
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                    .slice(0, 5);
+                updateActivityFeed();
+
                 renderChart('salesmenBranchChart', 'bar');
                 renderChart('salesmenDeviceChart', 'bar');
                 renderChart('salesmenPrinterChart', 'bar');
@@ -1375,6 +1424,42 @@
             } catch (error) {
                 console.error('Error loading dashboard data:', error);
             }
+        }
+
+        function updateActivityFeed() {
+            ELEMENTS.activityList.innerHTML = activityLog.map(entry => `
+                <li>
+                    <span class="timestamp">${new Date(entry.timestamp).toLocaleTimeString()}</span>
+                    <span class="user">[${entry.username}]</span>
+                    <span class="action-${entry.action.toLowerCase().split(' ')[0]}">${entry.action}</span>
+                </li>
+            `).join('');
+        }
+
+        function setupRealtimeSubscriptions() {
+            supabase.channel('salesmen-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'salesmen' }, () => loadDashboardData())
+                .subscribe();
+
+            supabase.channel('repair-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'repair_devices' }, () => loadDashboardData())
+                .subscribe();
+
+            supabase.channel('salesmen-audit-changes')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'audit_log' }, payload => {
+                    activityLog.unshift(payload.new);
+                    activityLog = activityLog.slice(0, 5);
+                    updateActivityFeed();
+                })
+                .subscribe();
+
+            supabase.channel('repair-audit-changes')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'repair_audit_log' }, payload => {
+                    activityLog.unshift(payload.new);
+                    activityLog = activityLog.slice(0, 5);
+                    updateActivityFeed();
+                })
+                .subscribe();
         }
     </script>
 </body>
