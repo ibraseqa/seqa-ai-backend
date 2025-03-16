@@ -6,7 +6,6 @@
     <title>Seqa Management System</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=collapse_content" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
     <style>
         :root {
@@ -30,12 +29,13 @@
             --audit-edit: #007bff;
             --audit-remove: #dc3545;
             --audit-toggle: #ffc107;
+            --glass-bg: rgba(255, 255, 255, 0.8);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Inter', sans-serif;
-            background: var(--background);
+            background: linear-gradient(135deg, var(--background), #e6eef5);
             color: var(--text);
             line-height: 1.6;
             display: flex;
@@ -49,15 +49,15 @@
             height: 100%;
             width: 70px;
             z-index: 11;
-            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            background: linear-gradient(135deg, rgba(20, 40, 70, 0.95), rgba(40, 80, 120, 0.95));
-            backdrop-filter: blur(12px);
-            box-shadow: 4px 0 25px rgba(0, 0, 0, 0.25);
+            transition: width 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(15px);
+            box-shadow: 4px 0 30px rgba(30, 58, 95, 0.2);
             border-radius: 0 20px 20px 0;
         }
         .sidebar-container.expanded { 
             width: 300px; 
-            border-radius: 0; 
+            border-radius: 0 30px 30px 0; 
         }
         .sidebar {
             width: 100%;
@@ -71,23 +71,25 @@
         .sidebar.expanded { padding: 20px; }
         .sidebar-header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
             opacity: 0;
             transition: opacity 0.3s ease 0.1s;
         }
         .sidebar.expanded .sidebar-header { opacity: 1; }
         .sidebar-header img {
-            width: 100px;
+            width: 80px;
             margin-bottom: 15px;
-            filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
-            transition: transform 0.3s ease;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
         }
-        .sidebar.expanded .sidebar-header img:hover { transform: scale(1.05); }
         .sidebar-header h1 {
-            font-size: 24px;
-            font-weight: 600;
-            letter-spacing: 1px;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 2px;
             text-transform: uppercase;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            background: linear-gradient(135deg, #fff, var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         .sidebar-nav {
             opacity: 0;
@@ -101,16 +103,29 @@
             color: #fff;
             text-decoration: none;
             font-size: 16px;
-            font-weight: 500;
-            border-radius: 10px;
-            margin-bottom: 10px;
+            font-weight: 600;
+            border-radius: 12px;
+            margin-bottom: 12px;
             transition: var(--transition);
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
         }
+        .sidebar-nav a::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+        .sidebar-nav a:hover::before { left: 100%; }
         .sidebar-nav a:hover {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.1));
-            transform: translateX(5px);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(8px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
         .sidebar-footer {
             margin-top: auto;
@@ -120,31 +135,48 @@
         }
         .sidebar.expanded .sidebar-footer { opacity: 1; }
         .logout-button {
-            background: linear-gradient(135deg, #ff4d4d, var(--action-remove));
+            background: linear-gradient(135deg, var(--action-remove), #c53030);
             color: #fff;
             padding: 12px 24px;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-weight: 600;
             font-size: 15px;
             cursor: pointer;
             transition: var(--transition);
             width: 100%;
             box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        .logout-button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.4s ease, height 0.4s ease;
+        }
+        .logout-button:hover::after {
+            width: 200%;
+            height: 200%;
         }
         .logout-button:hover {
-            background: linear-gradient(135deg, #e63939, #c53030);
             transform: translateY(-3px);
             box-shadow: 0 6px 16px rgba(229, 62, 62, 0.4);
         }
 
         .toggle-arrow {
             position: absolute;
-            top: 15px;
+            top: 20px;
             right: 15px;
             width: 40px;
             height: 40px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.2);
             border: none;
             border-radius: 50%;
             display: flex;
@@ -164,7 +196,8 @@
             transition: all 0.3s ease;
         }
         .sidebar-container:not(.expanded):hover .toggle-arrow {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.3);
+            transform: rotate(90deg);
         }
         .sidebar.expanded .toggle-arrow span:nth-child(1) {
             transform: rotate(45deg) translate(6px, 6px);
@@ -175,6 +208,156 @@
         .sidebar.expanded .toggle-arrow span:nth-child(3) {
             transform: rotate(-45deg) translate(6px, -6px);
         }
+
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            margin-left: 70px;
+            overflow-y: auto;
+            display: none;
+            transition: margin-left 0.4s ease;
+        }
+        .sidebar-container.expanded ~ .main-content { margin-left: 300px; }
+
+        .header {
+            background: var(--glass-bg);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            animation: slideIn 0.5s ease forwards;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .header h2 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            text-shadow: 0 2px 5px rgba(30, 58, 95, 0.2);
+        }
+        .header p {
+            font-size: 16px;
+            color: var(--gray);
+            margin-top: 8px;
+            opacity: 0.8;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 25px;
+            padding: 0 10px;
+        }
+        .chart-card, .stats-card, .activity-feed {
+            background: var(--glass-bg);
+            border-radius: 15px;
+            box-shadow: var(--shadow);
+            padding: 20px;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+            animation: cardReveal 0.6s ease forwards;
+            opacity: 0;
+        }
+        .dashboard > *:nth-child(1) { animation-delay: 0.1s; }
+        .dashboard > *:nth-child(2) { animation-delay: 0.2s; }
+        .dashboard > *:nth-child(3) { animation-delay: 0.3s; }
+        .dashboard > *:nth-child(4) { animation-delay: 0.4s; }
+        .dashboard > *:nth-child(5) { animation-delay: 0.5s; }
+        .dashboard > *:nth-child(6) { animation-delay: 0.6s; }
+        .dashboard > *:nth-child(7) { animation-delay: 0.7s; }
+        .dashboard > *:nth-child(8) { animation-delay: 0.8s; }
+        @keyframes cardReveal {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .chart-card:hover, .stats-card:hover, .activity-feed:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 8px 20px rgba(30, 58, 95, 0.2);
+        }
+        .chart-card h3, .stats-card h3, .activity-feed h3 {
+            font-size: 18px;
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-weight: 600;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .chart-card h3:hover { color: var(--secondary); }
+        .chart-container {
+            height: 250px;
+            position: relative;
+            overflow: hidden;
+        }
+        canvas { width: 100% !important; height: 100% !important; }
+        .expand-icon {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            background: var(--glass-bg);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: var(--transition);
+            z-index: 10;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .expand-icon:hover {
+            opacity: 1;
+            background: var(--accent);
+            transform: scale(1.1);
+            box-shadow: 0 4px 10px rgba(134, 188, 211, 0.3);
+        }
+        .expand-icon svg { fill: var(--primary); }
+
+        .stats-card p {
+            font-size: 16px;
+            color: var(--text);
+            margin: 12px 0;
+            transition: color 0.3s ease;
+        }
+        .stats-card .stat-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--secondary);
+            text-shadow: 0 2px 4px rgba(44, 110, 155, 0.2);
+        }
+        .stats-card:hover p { color: var(--primary); }
+
+        #activityList {
+            list-style: none;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 0;
+            text-align: left;
+            font-size: 13px;
+        }
+        #activityList li {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.3s ease;
+        }
+        #activityList li:hover {
+            background: rgba(134, 188, 211, 0.1);
+        }
+        #activityList .timestamp { font-weight: bold; color: var(--primary); }
+        #activityList .user { color: var(--gray); }
+        #activityList .action-add { color: var(--audit-add); }
+        #activityList .action-edit { color: var(--audit-edit); }
+        #activityList .action-remove { color: var(--audit-remove); }
+        #activityList .action-update { color: var(--audit-toggle); }
+        #activityList .action-delete { color: var(--audit-remove); }
+        #activityList .action-toggle { color: var(--audit-toggle); }
 
         .assistant-container {
             position: absolute;
@@ -187,7 +370,7 @@
             z-index: 10;
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             transform: translateX(-100%);
-            border-radius: 0 16px 16px 0;
+            border-radius: 0 20px 20px 0;
             display: none;
             flex-direction: column;
         }
@@ -198,11 +381,11 @@
         .assistant-header {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: #fff;
-            padding: 16px;
+            padding: 18px;
             text-align: center;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 600;
-            border-radius: 16px 16px 0 0;
+            border-radius: 20px 20px 0 0;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             flex-shrink: 0;
         }
@@ -213,10 +396,9 @@
             background: var(--chat-bg);
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 15px;
         }
         .assistant-message {
-            margin: 0;
             padding: 12px 16px;
             border-radius: 12px;
             background: var(--chat-assistant);
@@ -240,7 +422,6 @@
             background: linear-gradient(135deg, var(--chat-user), #357abd);
             color: #fff;
             margin-left: auto;
-            text-align: left;
             box-shadow: 0 2px 6px rgba(74, 144, 226, 0.3);
         }
         .assistant-message.user::after {
@@ -256,7 +437,7 @@
             gap: 12px;
             background: var(--white);
             border-top: 1px solid var(--border-color);
-            border-radius: 0 0 16px 16px;
+            border-radius: 0 0 20px 20px;
             flex-shrink: 0;
         }
         .assistant-input input {
@@ -291,210 +472,6 @@
             box-shadow: 0 4px 10px rgba(30, 58, 95, 0.4);
         }
 
-        .main-content {
-            flex: 1;
-            padding: 20px;
-            margin-left: 70px;
-            overflow-y: auto;
-            display: none;
-            transition: margin-left 0.4s ease;
-        }
-        .sidebar-container.expanded ~ .main-content { margin-left: 300px; }
-        .sidebar-container.expanded ~ .assistant-container.active ~ .main-content { margin-left: 750px; }
-        .header {
-            background: var(--white);
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: var(--shadow);
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .header h2 {
-            font-size: 24px;
-            color: var(--primary);
-            font-weight: 600;
-        }
-        .header p {
-            font-size: 14px;
-            color: var(--gray);
-            margin-top: 5px;
-        }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-        .chart-card {
-            background: var(--white);
-            border-radius: 8px;
-            box-shadow: var(--shadow);
-            padding: 15px;
-            position: relative;
-        }
-        .chart-card h3 {
-            font-size: 16px;
-            color: var(--primary);
-            margin-bottom: 10px;
-            font-weight: 600;
-            text-align: center;
-            cursor: pointer;
-            transition: color 0.3s ease;
-        }
-        .chart-card h3:hover { color: var(--secondary); }
-        .chart-container {
-            height: 200px;
-            display: block;
-            position: relative;
-            padding-bottom: 35px;
-        }
-        .chart-container.hidden { display: none; }
-        canvas { width: 100% !important; height: 100% !important; }
-
-        .expand-icon {
-            position: absolute;
-            bottom: 5px;
-            right: 5px;
-            width: 24px;
-            height: 24px;
-            border: none;
-            cursor: pointer;
-            opacity: 0.5;
-            transition: opacity 0.3s ease;
-            z-index: 1;
-        }
-        .expand-icon:hover { opacity: 1; }
-        .expand-icon svg {
-            width: 100%;
-            height: 100%;
-            fill: #808080;
-        }
-        .expand-icon:hover svg { fill: #000000; }
-
-        .toggle-view-icon {
-            position: absolute;
-            bottom: 5px;
-            right: 35px;
-            width: 24px;
-            height: 24px;
-            border: none;
-            cursor: pointer;
-            opacity: 0.5;
-            transition: opacity 0.3s ease;
-            z-index: 1;
-        }
-        .toggle-view-icon:hover { opacity: 1; }
-        .toggle-view-icon svg {
-            width: 100%;
-            height: 100%;
-            fill: #808080;
-        }
-        .toggle-view-icon:hover svg { fill: #000000; }
-
-        .flipping {
-            animation: flipAnimation 0.5s ease-in-out;
-        }
-        @keyframes flipAnimation {
-            0% { transform: rotateY(0deg); }
-            100% { transform: rotateY(180deg); }
-        }
-
-        .fullscreen-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 200;
-            justify-content: center;
-            align-items: center;
-        }
-        .fullscreen-modal.active { display: flex; }
-        .fullscreen-chart-container {
-            background: var(--white);
-            border-radius: 10px;
-            padding: 20px;
-            width: 90%;
-            height: 90%;
-            position: relative;
-            box-shadow: var(--shadow);
-        }
-        .close-button {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: var(--action-remove);
-            color: #fff;
-            border: none;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            font-size: 18px;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-        .close-button:hover { background: #c53030; }
-
-        .stats-card {
-            background: var(--white);
-            border-radius: 8px;
-            box-shadow: var(--shadow);
-            padding: 20px;
-            text-align: center;
-        }
-        .stats-card h3 {
-            font-size: 18px;
-            color: var(--primary);
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-        .stats-card p {
-            font-size: 16px;
-            color: var(--text);
-            margin: 10px 0;
-        }
-        .stats-card .stat-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--secondary);
-        }
-
-        .activity-feed {
-            background: var(--white);
-            border-radius: 8px;
-            box-shadow: var(--shadow);
-            padding: 20px;
-            text-align: center;
-        }
-        .activity-feed h3 {
-            font-size: 18px;
-            color: var(--primary);
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-        #activityList {
-            list-style: none;
-            max-height: 200px;
-            overflow-y: auto;
-            padding: 0;
-            text-align: left;
-            font-size: 12px;
-        }
-        #activityList li {
-            padding: 5px 0;
-            border-bottom: 1px solid var(--border-color);
-        }
-        #activityList .timestamp { font-weight: bold; }
-        #activityList .user { color: #6c757d; }
-        #activityList .action-add { color: var(--audit-add); }
-        #activityList .action-edit { color: var(--audit-edit); }
-        #activityList .action-remove { color: var(--audit-remove); }
-        #activityList .action-update { color: var(--audit-toggle); }
-        #activityList .action-delete { color: var(--audit-remove); }
-        #activityList .action-toggle { color: var(--audit-toggle); }
-
         .modal {
             display: none;
             position: fixed;
@@ -502,31 +479,34 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(30, 58, 95, 0.3); /* Adjusted to reduce grey */
             justify-content: center;
             align-items: center;
             z-index: 100;
-            backdrop-filter: blur(5px);
+            animation: fadeIn 0.3s ease;
         }
         .modal.active { display: flex; }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
         .login-modal-content {
             max-width: 640px;
-            border-radius: 20px;
+            border-radius: 25px;
             padding: 40px;
             display: flex;
             flex-direction: column;
             gap: 25px;
-            background: linear-gradient(135deg, #ffffff, #f8fafc);
+            background: rgba(255, 255, 255, 1); /* Fully opaque white */
             box-shadow: var(--login-shadow);
-            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.3);
             transition: transform 0.3s ease, opacity 0.3s ease;
+            position: relative;
+            z-index: 101;
         }
         #loginModal.active .login-modal-content {
             transform: scale(1);
             opacity: 1;
-        }
-        .login-header {
-            text-align: center;
         }
         .login-header img {
             width: 120px;
@@ -534,23 +514,22 @@
             filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
         }
         .login-header h3 {
-            font-size: 32px;
+            font-size: 34px;
             font-weight: 700;
             color: var(--primary);
-            margin: 0;
             letter-spacing: 1px;
+            text-shadow: 0 2px 5px rgba(30, 58, 95, 0.1);
         }
         .login-greeting {
             font-size: 18px;
             color: var(--gray);
             margin-top: 10px;
             opacity: 0.9;
-            font-weight: 400;
         }
         .login-form {
             display: flex;
             flex-direction: column;
-            gap: 25px;
+            gap: 20px;
         }
         .login-form label {
             position: relative;
@@ -569,6 +548,7 @@
             transition: all 0.3s ease;
             pointer-events: none;
             padding: 0 5px;
+            background: var(--white); /* Matches modal background */
         }
         .login-form input:focus + span,
         .login-form input:not(:placeholder-shown) + span {
@@ -579,7 +559,7 @@
         .login-form input {
             padding: 14px 16px;
             border: 1px solid var(--border-color);
-            border-radius: 8px;
+            border-radius: 10px;
             font-size: 16px;
             background: #fff;
             transition: border-color 0.3s ease, box-shadow 0.3s ease;
@@ -608,19 +588,21 @@
         .login-button {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: #fff;
-            padding: 12px;
-            border-radius: 8px;
+            padding: 14px;
+            border-radius: 10px;
             font-size: 16px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 1px;
             border: none;
-            transition: background 0.3s ease, transform 0.2s ease;
+            transition: var(--transition);
             cursor: pointer;
+            box-shadow: 0 4px 12px rgba(30, 58, 95, 0.3);
         }
         .login-button:hover {
             background: linear-gradient(135deg, var(--secondary), var(--primary));
             transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(30, 58, 95, 0.4);
         }
         .error-message {
             color: var(--action-remove);
@@ -635,20 +617,61 @@
             font-size: 12px;
             color: var(--gray);
             opacity: 0.8;
-            font-weight: 400;
         }
-        #loginModal {
-            opacity: 0;
-            transition: opacity 0.3s ease;
+
+        /* Particle Animation for Login Modal */
+        #loginParticles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
         }
-        #loginModal.active { opacity: 1; }
-        #loginModal .login-modal-content {
-            transform: scale(0.95);
-            opacity: 0;
+
+        .fullscreen-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(30, 58, 95, 0.3); /* Matching login modal overlay */
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+            animation: fadeIn 0.3s ease;
         }
-        #loginModal.active .login-modal-content {
-            transform: scale(1);
-            opacity: 1;
+        .fullscreen-modal.active { display: flex; }
+        .fullscreen-chart-container {
+            background: var(--glass-bg);
+            border-radius: 20px;
+            padding: 20px;
+            width: 90%;
+            height: 90%;
+            position: relative;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .close-button {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: var(--action-remove);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            font-size: 20px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .close-button:hover {
+            background: #c53030;
+            transform: rotate(90deg);
+            box-shadow: 0 4px 10px rgba(229, 62, 62, 0.3);
         }
     </style>
 </head>
@@ -696,11 +719,6 @@
                     <button class="expand-icon" onclick="showFullscreenChart('salesmenBranchChart')">
                         <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px">
                             <path d="M440-440v240h-80v-160H200v-80h240Zm160-320v160h160v80H520v-240h80Z"/>
-                        </svg>
-                    </button>
-                    <button class="toggle-view-icon" onclick="toggleCompanyBranchView()">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px">
-                            <path d="M360-120H200q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h160v80H200v560h160v80Zm80 80v-880h80v880h-80Zm160-80v-80h80v80h-80Zm0-640v-80h80v80h-80Zm160 640v-80h80q0 33-23.5 56.5T760-120Zm0-160v-80h80v80h-80Zm0-160v-80h80v80h-80Zm0-160v-80h80v80h-80Zm0-160v-80q33 0 56.5 23.5T840-760h-80Z"/>
                         </svg>
                     </button>
                     <canvas id="salesmenBranchChart"></canvas>
@@ -774,6 +792,7 @@
     </div>
 
     <div class="modal" id="loginModal">
+        <canvas id="loginParticles"></canvas>
         <div class="login-modal-content">
             <div class="login-header">
                 <img src="https://static.wixstatic.com/media/fdd745_d266b548f51c43cd8532994122bf4db6~mv2.png/v1/crop/x_0,y_0,w_1006,h_640/fill/w_121,h_77,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/seqa-lo.png" alt="Seqa Logo">
@@ -834,7 +853,6 @@
         let charts = {};
         let chartData = {};
         let fullscreenChart = null;
-        let isCompanyBranchView = true;
         let activityLog = [];
 
         function showLogin() {
@@ -844,6 +862,7 @@
             ELEMENTS.mainContent.style.display = "none";
             ELEMENTS.loginUsername.focus();
             updateGreeting();
+            initParticles(); // Start particle animation
         }
 
         function showContent() {
@@ -853,6 +872,7 @@
             ELEMENTS.mainContent.style.display = "block";
             loadDashboardData();
             setupRealtimeSubscriptions();
+            stopParticles(); // Stop particle animation when leaving login
         }
 
         function toggleSidebar() {
@@ -997,24 +1017,6 @@
             renderChart(chartId, newType);
         }
 
-        function toggleCompanyBranchView() {
-            isCompanyBranchView = !isCompanyBranchView;
-            const chartId = 'salesmenBranchChart';
-            const chartType = charts[chartId] ? charts[chartId].config.type : 'bar';
-            const canvas = document.getElementById(chartId);
-
-            canvas.classList.add('flipping');
-            setTimeout(() => {
-                canvas.classList.remove('flipping');
-            }, 500);
-
-            document.querySelector('[data-chart-id="salesmenBranchChart"] h3').textContent = isCompanyBranchView ? "Salesmen by Company & Branch" : "Salesmen by Company";
-            if (charts[chartId]) {
-                charts[chartId].destroy();
-            }
-            renderChart(chartId, chartType);
-        }
-
         function renderChart(chartId, type) {
             const ctx = document.getElementById(chartId);
             if (!ctx) return;
@@ -1026,12 +1028,27 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    y: { beginAtZero: true, title: { display: true, text: 'Count' } },
-                    x: { title: { display: true } }
+                    y: { 
+                        beginAtZero: true,
+                        title: { display: true, text: 'Count', color: '#2d3748' },
+                        grid: { color: 'rgba(44, 110, 155, 0.1)' },
+                        ticks: { color: '#2d3748' }
+                    },
+                    x: { 
+                        title: { display: true, color: '#2d3748' },
+                        grid: { color: 'rgba(44, 110, 155, 0.1)' },
+                        ticks: { color: '#2d3748' }
+                    }
                 },
-                plugins: { legend: { position: 'top' } },
-                animation: false
+                plugins: { 
+                    legend: { 
+                        position: 'top',
+                        labels: { color: '#2d3748', font: { family: 'Inter' } }
+                    }
+                },
+                animation: { duration: 1000, easing: 'easeOutBounce' }
             };
+
             const pieOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -1039,7 +1056,8 @@
                     legend: {
                         position: 'right',
                         labels: {
-                            font: { size: 12 },
+                            color: '#2d3748',
+                            font: { size: 12, family: 'Inter' },
                             padding: 10,
                             boxWidth: 20,
                             generateLabels: (chart) => {
@@ -1054,7 +1072,7 @@
                         }
                     }
                 },
-                animation: false
+                animation: { duration: 1000, easing: 'easeOutBounce' }
             };
 
             const colorPalettes = {
@@ -1068,26 +1086,20 @@
 
             switch (chartId) {
                 case 'salesmenBranchChart':
-                    const labels = isCompanyBranchView
-                        ? Object.keys(chartData.salesmenByCompanyBranch || {})
-                        : Object.keys(chartData.salesmenByCompany || {});
-                    const values = isCompanyBranchView
-                        ? Object.values(chartData.salesmenByCompanyBranch || {})
-                        : Object.values(chartData.salesmenByCompany || {});
                     data = {
-                        labels: labels,
+                        labels: Object.keys(chartData.salesmenByCompanyBranch || {}),
                         datasets: [{
-                            label: isCompanyBranchView ? `Salesmen by Company & Branch (${chartData.totalSalesmen || 0})` : `Salesmen by Company (${chartData.totalSalesmen || 0})`,
-                            data: values,
-                            backgroundColor: type === 'bar' ? 'rgba(44, 110, 155, 0.7)' : colorPalettes.salesmenBranchChart.slice(0, labels.length),
-                            borderColor: type === 'bar' ? 'rgba(44, 110, 155, 1)' : colorPalettes.salesmenBranchChart.map(color => color.replace('0.7', '1')),
+                            label: `Salesmen by Company & Branch (${chartData.totalSalesmen || 0})`,
+                            data: Object.values(chartData.salesmenByCompanyBranch || {}),
+                            backgroundColor: type === 'bar' ? 'rgba(44, 110, 155, 0.7)' : colorPalettes.salesmenBranchChart,
+                            borderColor: type === 'bar' ? '#2c6e9b' : colorPalettes.salesmenBranchChart,
                             borderWidth: 1
                         }]
                     };
                     options = type === 'bar' ? Object.assign({}, chartOptions, {
                         scales: {
                             y: { beginAtZero: true, title: { display: true, text: 'Count' } },
-                            x: { title: { display: true, text: isCompanyBranchView ? 'Company - Branch' : 'Company' } }
+                            x: { title: { display: true, text: 'Company - Branch' } }
                         }
                     }) : pieOptions;
                     break;
@@ -1097,8 +1109,8 @@
                         datasets: [{
                             label: `Salesmen by Device Type (${chartData.totalSalesmen || 0})`,
                             data: Object.values(chartData.salesmenByDeviceType || {}),
-                            backgroundColor: type === 'bar' ? 'rgba(134, 188, 211, 0.7)' : colorPalettes.salesmenDeviceChart.slice(0, Object.keys(chartData.salesmenByDeviceType || {}).length),
-                            borderColor: type === 'bar' ? 'rgba(134, 188, 211, 1)' : colorPalettes.salesmenDeviceChart.map(color => color.replace('0.7', '1')),
+                            backgroundColor: type === 'bar' ? 'rgba(134, 188, 211, 0.7)' : colorPalettes.salesmenDeviceChart,
+                            borderColor: type === 'bar' ? '#86bcd3' : colorPalettes.salesmenDeviceChart,
                             borderWidth: 1
                         }]
                     };
@@ -1115,8 +1127,8 @@
                         datasets: [{
                             label: `Salesmen by Printer Type (${chartData.totalSalesmen || 0})`,
                             data: Object.values(chartData.salesmenByPrinterType || {}),
-                            backgroundColor: type === 'bar' ? 'rgba(100, 150, 200, 0.7)' : colorPalettes.salesmenPrinterChart.slice(0, Object.keys(chartData.salesmenByPrinterType || {}).length),
-                            borderColor: type === 'bar' ? 'rgba(100, 150, 200, 1)' : colorPalettes.salesmenPrinterChart.map(color => color.replace('0.7', '1')),
+                            backgroundColor: type === 'bar' ? 'rgba(100, 150, 200, 0.7)' : colorPalettes.salesmenPrinterChart,
+                            borderColor: type === 'bar' ? '#2c6e9b' : colorPalettes.salesmenPrinterChart,
                             borderWidth: 1
                         }]
                     };
@@ -1133,8 +1145,8 @@
                         datasets: [{
                             label: `Devices in Repair (${chartData.totalActiveRepair || 0})`,
                             data: Object.values(chartData.repairByCompanyBranch || {}),
-                            backgroundColor: type === 'bar' ? 'rgba(229, 62, 62, 0.7)' : colorPalettes.repairChart.slice(0, Object.keys(chartData.repairByCompanyBranch || {}).length),
-                            borderColor: type === 'bar' ? 'rgba(229, 62, 62, 1)' : colorPalettes.repairChart.map(color => color.replace('0.7', '1')),
+                            backgroundColor: type === 'bar' ? 'rgba(229, 62, 62, 0.7)' : colorPalettes.repairChart,
+                            borderColor: type === 'bar' ? '#e53e3e' : colorPalettes.repairChart,
                             borderWidth: 1
                         }]
                     };
@@ -1151,8 +1163,8 @@
                         datasets: [{
                             label: `Salesmen by Status (${chartData.totalSalesmen || 0})`,
                             data: Object.values(chartData.salesmenByStatus || {}),
-                            backgroundColor: type === 'bar' ? 'rgba(40, 167, 69, 0.7)' : colorPalettes.salesmenStatusChart.slice(0, Object.keys(chartData.salesmenByStatus || {}).length),
-                            borderColor: type === 'bar' ? 'rgba(40, 167, 69, 1)' : colorPalettes.salesmenStatusChart.map(color => color.replace('0.7', '1')),
+                            backgroundColor: type === 'bar' ? 'rgba(40, 167, 69, 0.7)' : colorPalettes.salesmenStatusChart,
+                            borderColor: type === 'bar' ? '#28a745' : colorPalettes.salesmenStatusChart,
                             borderWidth: 1
                         }]
                     };
@@ -1169,8 +1181,8 @@
                         datasets: [{
                             label: `Repair Devices by Status (${chartData.totalRepair || 0})`,
                             data: Object.values(chartData.repairByStatus || {}),
-                            backgroundColor: type === 'bar' ? 'rgba(255, 193, 7, 0.7)' : colorPalettes.repairStatusChart.slice(0, Object.keys(chartData.repairByStatus || {}).length),
-                            borderColor: type === 'bar' ? 'rgba(255, 193, 7, 1)' : colorPalettes.repairStatusChart.map(color => color.replace('0.7', '1')),
+                            backgroundColor: type === 'bar' ? 'rgba(255, 193, 7, 0.7)' : colorPalettes.repairStatusChart,
+                            borderColor: type === 'bar' ? '#ffc107' : colorPalettes.repairStatusChart,
                             borderWidth: 1
                         }]
                     };
@@ -1210,7 +1222,7 @@
                         padding: { top: 10, bottom: 20 }
                     }
                 },
-                animation: false
+                animation: { duration: 1000, easing: 'easeOutBounce' }
             };
 
             const colorPalettes = {
@@ -1227,28 +1239,22 @@
 
             switch (chartId) {
                 case 'salesmenBranchChart':
-                    const labels = isCompanyBranchView
-                        ? Object.keys(chartData.salesmenByCompanyBranch || {})
-                        : Object.keys(chartData.salesmenByCompany || {});
-                    const values = isCompanyBranchView
-                        ? Object.values(chartData.salesmenByCompanyBranch || {})
-                        : Object.values(chartData.salesmenByCompany || {});
                     data = {
-                        labels: labels,
+                        labels: Object.keys(chartData.salesmenByCompanyBranch || {}),
                         datasets: [{
-                            label: isCompanyBranchView ? `Salesmen by Company & Branch (${chartData.totalSalesmen || 0})` : `Salesmen by Company (${chartData.totalSalesmen || 0})`,
-                            data: values,
-                            backgroundColor: chartType === 'bar' ? 'rgba(44, 110, 155, 0.7)' : colorPalettes.salesmenBranchChart.slice(0, labels.length),
-                            borderColor: chartType === 'bar' ? 'rgba(44, 110, 155, 1)' : colorPalettes.salesmenBranchChart.map(color => color.replace('0.7', '1')),
+                            label: `Salesmen by Company & Branch (${chartData.totalSalesmen || 0})`,
+                            data: Object.values(chartData.salesmenByCompanyBranch || {}),
+                            backgroundColor: chartType === 'bar' ? 'rgba(44, 110, 155, 0.7)' : colorPalettes.salesmenBranchChart,
+                            borderColor: chartType === 'bar' ? '#2c6e9b' : colorPalettes.salesmenBranchChart,
                             borderWidth: 1
                         }]
                     };
-                    options = Object.assign({}, fullscreenOptions, {
-                        title: { ...fullscreenOptions.title, text: isCompanyBranchView ? 'Salesmen by Company & Branch' : 'Salesmen by Company' }
+                    options = Object.assign({}, fullscreenOptions, { 
+                        title: { display: true, text: 'Salesmen by Company & Branch', font: { size: 20 }, color: '#2d3748' }
                     });
                     if (chartType === 'bar') options.scales = {
                         y: { beginAtZero: true, title: { display: true, text: 'Count' } },
-                        x: { title: { display: true, text: isCompanyBranchView ? 'Company - Branch' : 'Company' } }
+                        x: { title: { display: true, text: 'Company - Branch' } }
                     };
                     break;
                 case 'salesmenDeviceChart':
@@ -1257,12 +1263,14 @@
                         datasets: [{
                             label: `Salesmen by Device Type (${chartData.totalSalesmen || 0})`,
                             data: Object.values(chartData.salesmenByDeviceType || {}),
-                            backgroundColor: chartType === 'bar' ? 'rgba(134, 188, 211, 0.7)' : colorPalettes.salesmenDeviceChart.slice(0, Object.keys(chartData.salesmenByDeviceType || {}).length),
-                            borderColor: chartType === 'bar' ? 'rgba(134, 188, 211, 1)' : colorPalettes.salesmenDeviceChart.map(color => color.replace('0.7', '1')),
+                            backgroundColor: chartType === 'bar' ? 'rgba(134, 188, 211, 0.7)' : colorPalettes.salesmenDeviceChart,
+                            borderColor: chartType === 'bar' ? '#86bcd3' : colorPalettes.salesmenDeviceChart,
                             borderWidth: 1
                         }]
                     };
-                    options = Object.assign({}, fullscreenOptions, { title: { ...fullscreenOptions.title, text: 'Salesmen by Device Type' } });
+                    options = Object.assign({}, fullscreenOptions, { 
+                        title: { display: true, text: 'Salesmen by Device Type', font: { size: 20 }, color: '#2d3748' }
+                    });
                     if (chartType === 'bar') options.scales = {
                         y: { beginAtZero: true, title: { display: true, text: 'Count' } },
                         x: { title: { display: true, text: 'Device Type' } }
@@ -1274,12 +1282,14 @@
                         datasets: [{
                             label: `Salesmen by Printer Type (${chartData.totalSalesmen || 0})`,
                             data: Object.values(chartData.salesmenByPrinterType || {}),
-                            backgroundColor: chartType === 'bar' ? 'rgba(100, 150, 200, 0.7)' : colorPalettes.salesmenPrinterChart.slice(0, Object.keys(chartData.salesmenByPrinterType || {}).length),
-                            borderColor: chartType === 'bar' ? 'rgba(100, 150, 200, 1)' : colorPalettes.salesmenPrinterChart.map(color => color.replace('0.7', '1')),
+                            backgroundColor: chartType === 'bar' ? 'rgba(100, 150, 200, 0.7)' : colorPalettes.salesmenPrinterChart,
+                            borderColor: chartType === 'bar' ? '#2c6e9b' : colorPalettes.salesmenPrinterChart,
                             borderWidth: 1
                         }]
                     };
-                    options = Object.assign({}, fullscreenOptions, { title: { ...fullscreenOptions.title, text: 'Salesmen by Printer Type' } });
+                    options = Object.assign({}, fullscreenOptions, { 
+                        title: { display: true, text: 'Salesmen by Printer Type', font: { size: 20 }, color: '#2d3748' }
+                    });
                     if (chartType === 'bar') options.scales = {
                         y: { beginAtZero: true, title: { display: true, text: 'Count' } },
                         x: { title: { display: true, text: 'Printer Type' } }
@@ -1291,12 +1301,14 @@
                         datasets: [{
                             label: `Devices in Repair (${chartData.totalActiveRepair || 0})`,
                             data: Object.values(chartData.repairByCompanyBranch || {}),
-                            backgroundColor: chartType === 'bar' ? 'rgba(229, 62, 62, 0.7)' : colorPalettes.repairChart.slice(0, Object.keys(chartData.repairByCompanyBranch || {}).length),
-                            borderColor: chartType === 'bar' ? 'rgba(229, 62, 62, 1)' : colorPalettes.repairChart.map(color => color.replace('0.7', '1')),
+                            backgroundColor: chartType === 'bar' ? 'rgba(229, 62, 62, 0.7)' : colorPalettes.repairChart,
+                            borderColor: chartType === 'bar' ? '#e53e3e' : colorPalettes.repairChart,
                             borderWidth: 1
                         }]
                     };
-                    options = Object.assign({}, fullscreenOptions, { title: { ...fullscreenOptions.title, text: 'Devices in Repair' } });
+                    options = Object.assign({}, fullscreenOptions, { 
+                        title: { display: true, text: 'Devices in Repair', font: { size: 20 }, color: '#2d3748' }
+                    });
                     if (chartType === 'bar') options.scales = {
                         y: { beginAtZero: true, title: { display: true, text: 'Count' } },
                         x: { title: { display: true, text: 'Company - Branch' } }
@@ -1308,12 +1320,14 @@
                         datasets: [{
                             label: `Salesmen by Status (${chartData.totalSalesmen || 0})`,
                             data: Object.values(chartData.salesmenByStatus || {}),
-                            backgroundColor: chartType === 'bar' ? 'rgba(40, 167, 69, 0.7)' : colorPalettes.salesmenStatusChart.slice(0, Object.keys(chartData.salesmenByStatus || {}).length),
-                            borderColor: chartType === 'bar' ? 'rgba(40, 167, 69, 1)' : colorPalettes.salesmenStatusChart.map(color => color.replace('0.7', '1')),
+                            backgroundColor: chartType === 'bar' ? 'rgba(40, 167, 69, 0.7)' : colorPalettes.salesmenStatusChart,
+                            borderColor: chartType === 'bar' ? '#28a745' : colorPalettes.salesmenStatusChart,
                             borderWidth: 1
                         }]
                     };
-                    options = Object.assign({}, fullscreenOptions, { title: { ...fullscreenOptions.title, text: 'Salesmen by Status' } });
+                    options = Object.assign({}, fullscreenOptions, { 
+                        title: { display: true, text: 'Salesmen by Status', font: { size: 20 }, color: '#2d3748' }
+                    });
                     if (chartType === 'bar') options.scales = {
                         y: { beginAtZero: true, title: { display: true, text: 'Count' } },
                         x: { title: { display: true, text: 'Status' } }
@@ -1325,12 +1339,14 @@
                         datasets: [{
                             label: `Repair Devices by Status (${chartData.totalRepair || 0})`,
                             data: Object.values(chartData.repairByStatus || {}),
-                            backgroundColor: chartType === 'bar' ? 'rgba(255, 193, 7, 0.7)' : colorPalettes.repairStatusChart.slice(0, Object.keys(chartData.repairByStatus || {}).length),
-                            borderColor: chartType === 'bar' ? 'rgba(255, 193, 7, 1)' : colorPalettes.repairStatusChart.map(color => color.replace('0.7', '1')),
+                            backgroundColor: chartType === 'bar' ? 'rgba(255, 193, 7, 0.7)' : colorPalettes.repairStatusChart,
+                            borderColor: chartType === 'bar' ? '#ffc107' : colorPalettes.repairStatusChart,
                             borderWidth: 1
                         }]
                     };
-                    options = Object.assign({}, fullscreenOptions, { title: { ...fullscreenOptions.title, text: 'Repair Devices by Status' } });
+                    options = Object.assign({}, fullscreenOptions, { 
+                        title: { display: true, text: 'Repair Devices by Status', font: { size: 20 }, color: '#2d3748' }
+                    });
                     if (chartType === 'bar') options.scales = {
                         y: { beginAtZero: true, title: { display: true, text: 'Count' } },
                         x: { title: { display: true, text: 'Status' } }
@@ -1369,10 +1385,6 @@
                     salesmenByCompanyBranch: fetchedSalesmen.reduce((acc, { company, branch }) => {
                         const key = `${company} - ${branch}`;
                         acc[key] = (acc[key] || 0) + 1;
-                        return acc;
-                    }, {}),
-                    salesmenByCompany: fetchedSalesmen.reduce((acc, { company }) => {
-                        acc[company] = (acc[company] || 0) + 1;
                         return acc;
                     }, {}),
                     salesmenByDeviceType: fetchedSalesmen.reduce((acc, { device_type }) => {
@@ -1461,6 +1473,91 @@
                 })
                 .subscribe();
         }
+
+        // Particle Animation Logic
+        let particlesArray = [];
+        let animationFrameId = null;
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 5 + 1;
+                this.speedX = Math.random() * 1 - 0.5;
+                this.speedY = Math.random() * 1 - 0.5;
+                this.life = Math.random() * 60 + 30;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life--;
+            }
+            draw(ctx) {
+                ctx.fillStyle = `rgba(134, 188, 211, ${this.life / 90})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            const canvas = document.getElementById('loginParticles');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            particlesArray = [];
+            const numberOfParticles = 50;
+            for (let i = 0; i < numberOfParticles; i++) {
+                particlesArray.push(new Particle(
+                    Math.random() * canvas.width,
+                    Math.random() * canvas.height
+                ));
+            }
+
+            function animateParticles() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (let i = particlesArray.length - 1; i >= 0; i--) {
+                    particlesArray[i].update();
+                    particlesArray[i].draw(ctx);
+                    if (particlesArray[i].life <= 0) {
+                        particlesArray.splice(i, 1);
+                        particlesArray.push(new Particle(
+                            Math.random() * canvas.width,
+                            Math.random() * canvas.height
+                        ));
+                    }
+                }
+                animationFrameId = requestAnimationFrame(animateParticles);
+            }
+
+            canvas.addEventListener('mousemove', (e) => {
+                for (let i = 0; i < 5; i++) {
+                    particlesArray.push(new Particle(e.x, e.y));
+                }
+            });
+
+            animateParticles();
+        }
+
+        function stopParticles() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
+            }
+            const canvas = document.getElementById('loginParticles');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particlesArray = [];
+        }
+
+        window.addEventListener('resize', () => {
+            const canvas = document.getElementById('loginParticles');
+            if (canvas) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+        });
     </script>
 </body>
 </html>
